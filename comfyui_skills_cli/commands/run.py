@@ -13,7 +13,7 @@ import typer
 
 from ..client import ComfyUIClient
 from ..config import get_base_dir, get_default_server_id, get_server, load_config
-from ..output import is_json_mode, output_error, output_event, output_result
+from ..output import OutputFormat, get_output_format, is_machine_mode, output_error, output_event, output_result
 from ..storage import get_schema, get_workflow_data
 
 _POLL_INITIAL = 1.0
@@ -44,11 +44,20 @@ def run_cmd(
         return
 
     prompt_id = result.get("prompt_id", "")
-    if is_json_mode(ctx):
-        output_event("queued", prompt_id=prompt_id)
+    fmt = get_output_format(ctx)
+
+    # stream-json: emit events as they happen
+    output_event(ctx, "queued", prompt_id=prompt_id)
+
+    # Rich progress for text mode
+    if fmt == OutputFormat.TEXT:
+        from rich.console import Console
+        console = Console(stderr=True)
+        console.print(f"[dim]Queued: {prompt_id}[/dim]")
 
     # Poll until complete
     poll_interval = _POLL_INITIAL
+    prev_status = ""
     while True:
         history = client.get_history(prompt_id)
         if history:
@@ -57,6 +66,11 @@ def run_cmd(
 
             if status_info.get("completed", False) or outputs:
                 images = _collect_outputs(outputs)
+                output_event(ctx, "completed", prompt_id=prompt_id, outputs=images)
+
+                # Final result — json and stream-json both get this
+                if fmt == OutputFormat.STREAM_JSON:
+                    return
                 output_result(ctx, {
                     "status": "success",
                     "prompt_id": prompt_id,
@@ -66,8 +80,32 @@ def run_cmd(
 
             if status_info.get("status_str") == "error":
                 error_msg = _format_errors(history)
+                output_event(ctx, "error", prompt_id=prompt_id, message=error_msg)
                 output_error(ctx, "EXECUTION_FAILED", error_msg)
                 return
+
+        # Check queue position
+        queue = client.get_queue()
+        current_status = ""
+        for item in queue.get("queue_running", []):
+            if len(item) > 1 and item[1] == prompt_id:
+                current_status = "running"
+                break
+        if not current_status:
+            for i, item in enumerate(queue.get("queue_pending", [])):
+                if len(item) > 1 and item[1] == prompt_id:
+                    current_status = f"queued:{i}"
+                    break
+
+        if current_status and current_status != prev_status:
+            if current_status == "running":
+                output_event(ctx, "running", prompt_id=prompt_id)
+                if fmt == OutputFormat.TEXT:
+                    console.print("[yellow]Running...[/yellow]")
+            elif current_status.startswith("queued:"):
+                pos = current_status.split(":")[1]
+                output_event(ctx, "queued", prompt_id=prompt_id, position=int(pos))
+            prev_status = current_status
 
         time.sleep(poll_interval)
         poll_interval = min(poll_interval * _POLL_FACTOR, _POLL_MAX)

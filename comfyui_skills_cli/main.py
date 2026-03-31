@@ -17,13 +17,15 @@ app = typer.Typer(
 @app.callback()
 def main(
     ctx: typer.Context,
-    json_output: bool = typer.Option(False, "--json", "-j", help="Force JSON output"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="JSON output (shortcut for --output-format json)"),
+    output_format: str = typer.Option("", "--output-format", help="Output format: text, json, stream-json"),
     server_id: str = typer.Option("", "--server", "-s", help="Server ID"),
     base_dir: str = typer.Option("", "--dir", "-d", help="Data directory (default: current directory)"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
 ):
     ctx.ensure_object(dict)
     ctx.obj["json"] = json_output
+    ctx.obj["output_format"] = output_format
     ctx.obj["server"] = server_id
     ctx.obj["base_dir"] = base_dir
     ctx.obj["verbose"] = verbose

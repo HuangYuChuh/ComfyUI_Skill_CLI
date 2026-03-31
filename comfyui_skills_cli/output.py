@@ -1,9 +1,10 @@
-"""Unified output formatting — the only place that handles Rich / JSON."""
+"""Unified output formatting — the only place that handles text / JSON / stream-JSON."""
 
 from __future__ import annotations
 
 import json
 import sys
+from enum import Enum
 from typing import Any
 
 import typer
@@ -11,14 +12,31 @@ from rich.console import Console
 from rich.table import Table
 
 
-def is_json_mode(ctx: typer.Context) -> bool:
-    if ctx.obj and ctx.obj.get("json"):
-        return True
-    return not sys.stdout.isatty()
+class OutputFormat(str, Enum):
+    TEXT = "text"                # Rich tables, progress bars (human)
+    JSON = "json"               # Single JSON result at end (agent, one-shot)
+    STREAM_JSON = "stream-json" # NDJSON events in real time (agent, streaming)
+
+
+def get_output_format(ctx: typer.Context) -> OutputFormat:
+    if ctx.obj:
+        fmt = ctx.obj.get("output_format", "")
+        if fmt:
+            return OutputFormat(fmt)
+        if ctx.obj.get("json"):
+            return OutputFormat.JSON
+    if not sys.stdout.isatty():
+        return OutputFormat.JSON
+    return OutputFormat.TEXT
+
+
+def is_machine_mode(ctx: typer.Context) -> bool:
+    return get_output_format(ctx) in (OutputFormat.JSON, OutputFormat.STREAM_JSON)
 
 
 def output_result(ctx: typer.Context, data: Any) -> None:
-    if is_json_mode(ctx):
+    fmt = get_output_format(ctx)
+    if fmt in (OutputFormat.JSON, OutputFormat.STREAM_JSON):
         indent = 2 if sys.stdout.isatty() else None
         json.dump(data, sys.stdout, ensure_ascii=False, indent=indent, default=str)
         sys.stdout.write("\n")
@@ -27,7 +45,7 @@ def output_result(ctx: typer.Context, data: Any) -> None:
 
 
 def output_error(ctx: typer.Context, code: str, message: str, hint: str = "") -> None:
-    if is_json_mode(ctx):
+    if is_machine_mode(ctx):
         err: dict[str, Any] = {"error": {"code": code, "message": message}}
         if hint:
             err["error"]["hint"] = hint
@@ -41,10 +59,13 @@ def output_error(ctx: typer.Context, code: str, message: str, hint: str = "") ->
     raise typer.Exit(code=1)
 
 
-def output_event(event_type: str, **data: Any) -> None:
-    json.dump({"event": event_type, **data}, sys.stdout, ensure_ascii=False, default=str)
-    sys.stdout.write("\n")
-    sys.stdout.flush()
+def output_event(ctx: typer.Context, event_type: str, **data: Any) -> None:
+    """Emit a single NDJSON event line. Only outputs in stream-json mode."""
+    fmt = get_output_format(ctx)
+    if fmt == OutputFormat.STREAM_JSON:
+        json.dump({"event": event_type, **data}, sys.stdout, ensure_ascii=False, default=str)
+        sys.stdout.write("\n")
+        sys.stdout.flush()
 
 
 def _print_rich(data: Any) -> None:
