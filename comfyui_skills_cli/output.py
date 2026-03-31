@@ -1,0 +1,64 @@
+"""Unified output formatting — the only place that handles Rich / JSON."""
+
+from __future__ import annotations
+
+import json
+import sys
+from typing import Any
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+
+def is_json_mode(ctx: typer.Context) -> bool:
+    if ctx.obj and ctx.obj.get("json"):
+        return True
+    return not sys.stdout.isatty()
+
+
+def output_result(ctx: typer.Context, data: Any) -> None:
+    if is_json_mode(ctx):
+        indent = 2 if sys.stdout.isatty() else None
+        json.dump(data, sys.stdout, ensure_ascii=False, indent=indent, default=str)
+        sys.stdout.write("\n")
+    else:
+        _print_rich(data)
+
+
+def output_error(ctx: typer.Context, code: str, message: str, hint: str = "") -> None:
+    if is_json_mode(ctx):
+        err: dict[str, Any] = {"error": {"code": code, "message": message}}
+        if hint:
+            err["error"]["hint"] = hint
+        json.dump(err, sys.stderr, ensure_ascii=False)
+        sys.stderr.write("\n")
+    else:
+        console = Console(stderr=True)
+        console.print(f"[red bold]Error:[/red bold] {message}")
+        if hint:
+            console.print(f"[dim]Hint: {hint}[/dim]")
+    raise typer.Exit(code=1)
+
+
+def output_event(event_type: str, **data: Any) -> None:
+    json.dump({"event": event_type, **data}, sys.stdout, ensure_ascii=False, default=str)
+    sys.stdout.write("\n")
+    sys.stdout.flush()
+
+
+def _print_rich(data: Any) -> None:
+    console = Console()
+    if isinstance(data, list) and data and isinstance(data[0], dict):
+        table = Table()
+        keys = list(data[0].keys())
+        for key in keys:
+            table.add_column(key)
+        for item in data:
+            table.add_row(*[str(item.get(k, "")) for k in keys])
+        console.print(table)
+    elif isinstance(data, dict):
+        for key, value in data.items():
+            console.print(f"[bold]{key}:[/bold] {value}")
+    else:
+        console.print(data)

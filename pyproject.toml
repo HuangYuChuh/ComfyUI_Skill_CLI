@@ -1,0 +1,19 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61"]
+
+[project]
+name = "comfyui-skill-cli"
+version = "0.1.0"
+description = "ComfyUI Skill CLI — Agent-friendly workflow management"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    "typer>=0.9",
+    "rich>=13.0",
+    "requests>=2.28",
+]
+
+[project.scripts]
+comfyui-skill = "comfyui_skills_cli.__main__:main"
