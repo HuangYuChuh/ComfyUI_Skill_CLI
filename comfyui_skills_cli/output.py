@@ -68,18 +68,42 @@ def output_event(ctx: typer.Context, event_type: str, **data: Any) -> None:
         sys.stdout.flush()
 
 
+def _format_cell(key: str, value: Any) -> str:
+    """Format a cell value for Rich table display."""
+    if key == "parameters" and isinstance(value, dict):
+        parts = []
+        for name, meta in value.items():
+            req = "*" if (isinstance(meta, dict) and meta.get("required")) else ""
+            parts.append(f"{req}{name}")
+        return ", ".join(parts) if parts else "-"
+    if isinstance(value, dict):
+        return json.dumps(value, ensure_ascii=False)
+    return str(value)
+
+
 def _print_rich(data: Any) -> None:
     console = Console()
     if isinstance(data, list) and data and isinstance(data[0], dict):
-        table = Table()
+        table = Table(show_lines=True)
         keys = list(data[0].keys())
         for key in keys:
             table.add_column(key)
         for item in data:
-            table.add_row(*[str(item.get(k, "")) for k in keys])
+            table.add_row(*[_format_cell(k, item.get(k, "")) for k in keys])
         console.print(table)
     elif isinstance(data, dict):
         for key, value in data.items():
-            console.print(f"[bold]{key}:[/bold] {value}")
+            if isinstance(value, dict):
+                console.print(f"[bold]{key}:[/bold]")
+                for k, v in value.items():
+                    if isinstance(v, dict):
+                        req = " [red](required)[/red]" if v.get("required") else ""
+                        desc = v.get("description", "")
+                        vtype = v.get("type", "")
+                        console.print(f"  [cyan]{k}[/cyan] ({vtype}){req}: {desc}")
+                    else:
+                        console.print(f"  [cyan]{k}:[/cyan] {v}")
+            else:
+                console.print(f"[bold]{key}:[/bold] {value}")
     else:
         console.print(data)
