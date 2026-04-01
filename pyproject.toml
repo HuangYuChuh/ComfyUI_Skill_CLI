@@ -4,7 +4,7 @@ requires = ["setuptools>=61"]
 
 [project]
 name = "comfyui-skill-cli"
-version = "0.1.0"
+version = "0.2.0"
 description = "ComfyUI Skill CLI — Agent-friendly workflow management"
 readme = "README.md"
 requires-python = ">=3.10"
