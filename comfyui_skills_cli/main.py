@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-from .commands import deps, run, server, skill
+from .commands import deps, run, server, skill, upload, workflow
 
 app = typer.Typer(
     name="comfyui-skill",
@@ -32,7 +32,7 @@ def main(
 
 
 # Subcommand groups — each needs a callback to inherit parent context
-for sub_app in [deps.app, server.app]:
+for sub_app in [deps.app, server.app, workflow.app]:
     @sub_app.callback()
     def _pass_context(ctx: typer.Context):
         if ctx.parent and ctx.parent.obj:
@@ -41,6 +41,7 @@ for sub_app in [deps.app, server.app]:
 
 app.add_typer(deps.app, name="deps", help="Manage dependencies")
 app.add_typer(server.app, name="server", help="Manage servers")
+app.add_typer(workflow.app, name="workflow", help="Manage workflows")
 
 # Top-level commands
 app.command("list")(skill.skill_list)
@@ -48,3 +49,4 @@ app.command("info")(skill.skill_info)
 app.command("run")(run.run_cmd)
 app.command("submit")(run.submit_cmd)
 app.command("status")(run.status_cmd)
+app.command("upload")(upload.upload_cmd)

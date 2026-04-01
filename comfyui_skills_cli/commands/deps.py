@@ -110,8 +110,10 @@ def deps_install(
     ctx: typer.Context,
     skill_id: str = typer.Argument(help="Skill ID: server_id/workflow_id"),
     repos: str = typer.Option("[]", "--repos", "-r", help="JSON array of git repo URLs to install"),
+    models: bool = typer.Option(False, "--models", "-m", help="Also install missing models via Manager"),
+    install_all: bool = typer.Option(False, "--all", help="Auto-detect and install all missing nodes and models"),
 ):
-    """Install missing custom node packages via ComfyUI Manager."""
+    """Install missing dependencies via ComfyUI Manager."""
     base_dir = get_base_dir(ctx.obj.get("base_dir", ""))
     config = load_config(base_dir)
 
@@ -126,20 +128,6 @@ def deps_install(
         output_error(ctx, "SERVER_NOT_FOUND", f'Server "{server_id}" not found.')
         return
 
-    # Parse repos
-    try:
-        repo_urls = json.loads(repos)
-        if not isinstance(repo_urls, list):
-            output_error(ctx, "INVALID_ARGS", "--repos must be a JSON array of URLs")
-            return
-    except json.JSONDecodeError:
-        output_error(ctx, "INVALID_ARGS", "Invalid JSON for --repos")
-        return
-
-    if not repo_urls:
-        output_error(ctx, "INVALID_ARGS", "No repo URLs provided. Use --repos '[\"https://github.com/...\"]'")
-        return
-
     client = ComfyUIClient(
         server_url=server_config.get("url", "http://127.0.0.1:8188"),
         auth=server_config.get("auth", ""),
@@ -152,9 +140,53 @@ def deps_install(
                      hint="Install ComfyUI-Manager first: https://github.com/ltdrdata/ComfyUI-Manager")
         return
 
+    # Parse repos
+    try:
+        repo_urls = json.loads(repos)
+        if not isinstance(repo_urls, list):
+            output_error(ctx, "INVALID_ARGS", "--repos must be a JSON array of URLs")
+            return
+    except json.JSONDecodeError:
+        output_error(ctx, "INVALID_ARGS", "Invalid JSON for --repos")
+        return
+
+    # If --all, auto-detect missing deps
+    model_list: list[dict[str, str]] = []
+    if install_all:
+        workflow_data = get_workflow_data(base_dir, server_id, workflow_id)
+        if not workflow_data:
+            output_error(ctx, "SKILL_NOT_FOUND", f'Skill "{server_id}/{workflow_id}" not found.')
+            return
+        try:
+            object_info = client.get_object_info()
+            required_nodes = {
+                node.get("class_type", "")
+                for node in workflow_data.values()
+                if isinstance(node, dict) and node.get("class_type")
+            }
+            installed_nodes = set(object_info.keys())
+            # We can't auto-resolve repo URLs for missing nodes without a registry lookup
+            # But we report what's missing so the user knows
+            missing_nodes = [ct for ct in required_nodes if ct not in installed_nodes]
+            if missing_nodes:
+                output_event(ctx, "warning",
+                             message=f"Missing nodes detected: {', '.join(missing_nodes)}. "
+                                     "Provide --repos to install them.")
+        except Exception:
+            pass
+
+        model_list = _check_missing_models(client, workflow_data)
+        models = bool(model_list)
+
+    if not repo_urls and not models:
+        output_error(ctx, "INVALID_ARGS",
+                     "Nothing to install. Use --repos, --models, or --all.")
+        return
+
     results = []
     needs_restart = False
 
+    # Install custom nodes
     for repo_url in repo_urls:
         pkg_name = repo_url.rstrip("/").split("/")[-1].replace(".git", "")
         output_event(ctx, "installing", package=pkg_name, source=repo_url)
@@ -162,13 +194,12 @@ def deps_install(
         install_result = client.manager_install_node(repo_url, pkg_name)
 
         if install_result.get("success"):
-            # Wait for queue to finish
             success = client.manager_wait_for_queue(max_polls=60, interval=3.0)
             results.append({
+                "type": "node",
                 "package": pkg_name,
                 "source": repo_url,
                 "success": success,
-                "method": "manager_queue",
                 "message": "installed via Manager" if success else "Manager queue timed out",
             })
             if success:
@@ -179,12 +210,47 @@ def deps_install(
         else:
             error_msg = install_result.get("error", "unknown error")
             results.append({
+                "type": "node",
                 "package": pkg_name,
                 "source": repo_url,
                 "success": False,
                 "message": error_msg,
             })
             output_event(ctx, "installed", package=pkg_name, success=False, message=error_msg)
+
+    # Install models
+    if models:
+        if not model_list:
+            # Auto-detect missing models
+            workflow_data = get_workflow_data(base_dir, server_id, workflow_id)
+            if workflow_data:
+                model_list = _check_missing_models(client, workflow_data)
+
+        for model_info in model_list:
+            filename = model_info.get("filename", "")
+            output_event(ctx, "installing_model", filename=filename, folder=model_info.get("folder", ""))
+
+            install_result = client.manager_install_model(model_info)
+            if install_result.get("success"):
+                success = client.manager_wait_for_queue(max_polls=120, interval=5.0)
+                results.append({
+                    "type": "model",
+                    "filename": filename,
+                    "folder": model_info.get("folder", ""),
+                    "success": success,
+                    "message": "downloaded via Manager" if success else "download timed out",
+                })
+                output_event(ctx, "installed_model", filename=filename, success=success)
+            else:
+                error_msg = install_result.get("error", "unknown error")
+                results.append({
+                    "type": "model",
+                    "filename": filename,
+                    "folder": model_info.get("folder", ""),
+                    "success": False,
+                    "message": error_msg,
+                })
+                output_event(ctx, "installed_model", filename=filename, success=False, message=error_msg)
 
     output_result(ctx, {
         "results": results,

@@ -126,6 +126,76 @@ class ComfyUIClient:
         except (requests.RequestException, ValueError):
             return None
 
+    # -- Image upload --
+
+    def upload_image(self, filepath: str) -> dict[str, Any]:
+        import mimetypes
+        import os
+        filename = os.path.basename(filepath)
+        content_type = mimetypes.guess_type(filepath)[0] or "image/png"
+        with open(filepath, "rb") as f:
+            content = f.read()
+
+        boundary = f"----ComfyUIBoundary{id(content)}"
+        body = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="image"; filename="{filename}"\r\n'
+            f"Content-Type: {content_type}\r\n\r\n"
+        ).encode("utf-8") + content + f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+        headers = self._headers()
+        headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+        resp = requests.post(
+            f"{self.server_url}/upload/image",
+            data=body,
+            headers=headers,
+            timeout=self.timeout,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    # -- ComfyUI Userdata API --
+
+    def list_userdata_workflows(self) -> list[str]:
+        for path in ["/v2/userdata", "/userdata"]:
+            try:
+                resp = self._get(f"{path}?dir=workflows&recurse=true")
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if isinstance(data, list):
+                        return [f for f in data if isinstance(f, str) and f.endswith(".json")]
+                    if isinstance(data, dict) and "files" in data:
+                        return [
+                            f.get("path", f.get("name", ""))
+                            for f in data["files"]
+                            if isinstance(f, dict) and (f.get("path", "") or f.get("name", "")).endswith(".json")
+                        ]
+            except (requests.RequestException, ValueError):
+                continue
+        return []
+
+    def read_userdata_workflow(self, workflow_path: str) -> dict[str, Any] | None:
+        import urllib.parse
+        encoded = urllib.parse.quote(workflow_path, safe="")
+        for base in ["/v2/userdata", "/userdata"]:
+            try:
+                resp = self._get(f"{base}/workflows/{encoded}")
+                if resp.status_code == 200:
+                    return resp.json()
+            except (requests.RequestException, ValueError):
+                continue
+        return None
+
+    # -- Manager model install --
+
+    def manager_install_model(self, model_info: dict[str, str]) -> dict[str, Any]:
+        resp = self._post("/manager/queue/install_model", json_data=model_info)
+        if resp.status_code == 404:
+            return {"success": False, "error": "ComfyUI Manager not installed"}
+        if resp.status_code >= 400:
+            return {"success": False, "error": f"Manager API error: {resp.status_code}"}
+        return {"success": True}
+
     def manager_wait_for_queue(self, max_polls: int = 60, interval: float = 3.0) -> bool:
         for _ in range(max_polls):
             time.sleep(interval)
