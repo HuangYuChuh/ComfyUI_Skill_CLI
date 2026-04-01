@@ -9,11 +9,32 @@ description = "ComfyUI Skill CLI — Agent-friendly workflow management"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
+authors = [
+    {name = "HuangYuChuh"},
+]
+keywords = ["comfyui", "cli", "agent", "skill", "workflow", "ai", "image-generation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Multimedia :: Graphics",
+]
 dependencies = [
     "typer>=0.9",
     "rich>=13.0",
     "requests>=2.28",
 ]
+
+[project.urls]
+Homepage = "https://github.com/HuangYuChuh/ComfyUI_Skill_CLI"
+Repository = "https://github.com/HuangYuChuh/ComfyUI_Skill_CLI"
+Issues = "https://github.com/HuangYuChuh/ComfyUI_Skill_CLI/issues"
 
 [project.scripts]
 comfyui-skill = "comfyui_skills_cli.__main__:main"
