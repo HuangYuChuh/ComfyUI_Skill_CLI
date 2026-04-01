@@ -1,5 +1,25 @@
 # ComfyUI Skill CLI
 
+<div align="center">
+<pre>
++--------------------------------------------------+
+|                                                  |
+|      ____                 __       _   _ ___     |
+|     / ___|___  _ __ ___  / _|_   _| | | |_ _|    |
+|    | |   / _ \| '_ ` _ \| |_| | | | | | || |     |
+|    | |__| (_) | | | | | |  _| |_| | |_| || |     |
+|     \____\___/|_| |_| |_|_|  \__, |\___/|___|    |
+|                              |___/               |
+|        ____  _    _ _ _    ____ _     ___        |
+|       / ___|| | _(_) | |  / ___| |   |_ _|       |
+|       \___ \| |/ / | | | | |   | |    | |        |
+|        ___) |   <| | | | | |___| |___ | |        |
+|       |____/|_|\_\_|_|_|  \____|_____|___|       |
+|                                                  |
++--------------------------------------------------+
+</pre>
+</div>
+
 [中文版](./README.zh.md) | [English](./README.md)
 
 Agent-friendly command-line tool for managing and executing [ComfyUI](https://github.com/comfyanonymous/ComfyUI) workflow skills. Any AI agent that can run shell commands (Claude, Codex, OpenClaw, etc.) can use ComfyUI through this CLI.
