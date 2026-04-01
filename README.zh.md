@@ -31,6 +31,12 @@ pipx install -e .
 
 `-e`（editable）会直接链接到本地源码，改完代码无需重新安装。
 
+### 更新
+
+```bash
+pipx upgrade comfyui-skill-cli
+```
+
 ## 快速开始
 
 ```bash
@@ -175,7 +181,3 @@ comfyui-skill deps install local/my-workflow --all --json
 ## 兼容性
 
 基于 [Typer](https://typer.tiangolo.com/) 构建，与 [comfy-cli](https://github.com/Comfy-Org/comfy-cli) 使用相同框架。未来计划作为 `comfy skills` 子命令集成。
-
-## License
-
-MIT
