@@ -16,13 +16,23 @@ from ..output import output_error, output_event, output_result
 app = typer.Typer()
 
 
+_DEFAULT_EXPORT_NAME = "comfyui-skill-export.json"
+
+
 @app.command("export")
 def config_export(
     ctx: typer.Context,
-    output: str = typer.Option("./comfyui-skill-export.json", "--output", "-o", help="Output file path"),
+    output: str = typer.Option("", "--output", "-o", help="Output file or directory (default: ./comfyui-skill-export.json)"),
     portable_only: bool = typer.Option(False, "--portable-only", help="Exclude server URLs and auth"),
 ):
     """Export config and workflows as a portable bundle."""
+    if not output:
+        output = os.path.join(os.getcwd(), _DEFAULT_EXPORT_NAME)
+    elif os.path.isdir(output):
+        output = os.path.join(output, _DEFAULT_EXPORT_NAME)
+    else:
+        output = os.path.abspath(output)
+
     base_dir = get_base_dir(ctx.obj.get("base_dir", ""))
     config = load_config(base_dir)
 
