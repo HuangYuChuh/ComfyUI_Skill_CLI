@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import typer
 
 from ..client import ComfyUIClient
 from ..config import get_base_dir, get_default_server_id, get_server, load_config
-from ..output import output_error, output_result
+from ..output import output_error, output_event, output_result
 from ..storage import get_workflow_data
 
 app = typer.Typer()
@@ -108,15 +109,88 @@ def deps_check(
 def deps_install(
     ctx: typer.Context,
     skill_id: str = typer.Argument(help="Skill ID: server_id/workflow_id"),
+    repos: str = typer.Option("[]", "--repos", "-r", help="JSON array of git repo URLs to install"),
 ):
-    """Install missing dependencies for a skill."""
-    # TODO: Implement dependency installation (Manager API / comfy-cli bridge)
+    """Install missing custom node packages via ComfyUI Manager."""
+    base_dir = get_base_dir(ctx.obj.get("base_dir", ""))
+    config = load_config(base_dir)
+
+    if "/" in skill_id:
+        server_id, workflow_id = skill_id.split("/", 1)
+    else:
+        server_id = ctx.obj.get("server") or get_default_server_id(config)
+        workflow_id = skill_id
+
+    server_config = get_server(config, server_id)
+    if not server_config:
+        output_error(ctx, "SERVER_NOT_FOUND", f'Server "{server_id}" not found.')
+        return
+
+    # Parse repos
+    try:
+        repo_urls = json.loads(repos)
+        if not isinstance(repo_urls, list):
+            output_error(ctx, "INVALID_ARGS", "--repos must be a JSON array of URLs")
+            return
+    except json.JSONDecodeError:
+        output_error(ctx, "INVALID_ARGS", "Invalid JSON for --repos")
+        return
+
+    if not repo_urls:
+        output_error(ctx, "INVALID_ARGS", "No repo URLs provided. Use --repos '[\"https://github.com/...\"]'")
+        return
+
+    client = ComfyUIClient(
+        server_url=server_config.get("url", "http://127.0.0.1:8188"),
+        auth=server_config.get("auth", ""),
+    )
+
+    # Start manager queue
+    if not client.manager_start_queue():
+        output_error(ctx, "MANAGER_UNAVAILABLE",
+                     "ComfyUI Manager is not available on this server.",
+                     hint="Install ComfyUI-Manager first: https://github.com/ltdrdata/ComfyUI-Manager")
+        return
+
+    results = []
+    needs_restart = False
+
+    for repo_url in repo_urls:
+        pkg_name = repo_url.rstrip("/").split("/")[-1].replace(".git", "")
+        output_event(ctx, "installing", package=pkg_name, source=repo_url)
+
+        install_result = client.manager_install_node(repo_url, pkg_name)
+
+        if install_result.get("success"):
+            # Wait for queue to finish
+            success = client.manager_wait_for_queue(max_polls=60, interval=3.0)
+            results.append({
+                "package": pkg_name,
+                "source": repo_url,
+                "success": success,
+                "method": "manager_queue",
+                "message": "installed via Manager" if success else "Manager queue timed out",
+            })
+            if success:
+                needs_restart = True
+                output_event(ctx, "installed", package=pkg_name, success=True)
+            else:
+                output_event(ctx, "installed", package=pkg_name, success=False, message="queue timed out")
+        else:
+            error_msg = install_result.get("error", "unknown error")
+            results.append({
+                "package": pkg_name,
+                "source": repo_url,
+                "success": False,
+                "message": error_msg,
+            })
+            output_event(ctx, "installed", package=pkg_name, success=False, message=error_msg)
+
     output_result(ctx, {
-        "skill_id": skill_id,
-        "status": "not_implemented",
-        "message": "Dependency installation will be implemented in a future version. "
-                   "Use the Python script instead: "
-                   "python ./scripts/comfyui_client.py install-deps --workflow <id> --repos '[...]'",
+        "results": results,
+        "needs_restart": needs_restart,
+        "installed": sum(1 for r in results if r["success"]),
+        "failed": sum(1 for r in results if not r["success"]),
     })
 
 
