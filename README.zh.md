@@ -49,6 +49,23 @@ comfyui-skill run local/txt2img --args '{"prompt": "a white cat"}'
 
 所有命令均支持 `--json` 输出结构化数据。
 
+## ID 约定
+
+CLI 中有两种 ID，请注意区分：
+
+| 标记 | 含义 | 示例 |
+|------|------|------|
+| `<workflow_id>` | 工作流标识，格式为 `服务器ID/工作流名称` | `local/txt2img` |
+| `<server_id>` | 服务器标识 | `local`、`remote-a100` |
+
+当 `<workflow_id>` 省略服务器前缀时，自动使用默认服务器：
+
+```bash
+comfyui-skill run local/txt2img          # 指定服务器
+comfyui-skill run txt2img                # 使用默认服务器
+comfyui-skill run txt2img -s my_server   # 通过 --server 指定
+```
+
 ## 命令
 
 ### 工作流发现与执行
@@ -56,41 +73,41 @@ comfyui-skill run local/txt2img --args '{"prompt": "a white cat"}'
 | 命令 | 说明 |
 |------|------|
 | `comfyui-skill list` | 列出所有可用工作流及参数 |
-| `comfyui-skill info <id>` | 查看工作流详情和参数 schema |
-| `comfyui-skill run <id> --args '{...}'` | 执行工作流（阻塞，等待完成返回图片路径） |
-| `comfyui-skill submit <id> --args '{...}'` | 提交工作流（非阻塞，立即返回 prompt_id） |
-| `comfyui-skill status <prompt-id>` | 查询执行状态，完成后下载结果 |
-| `comfyui-skill upload <image>` | 上传图片到 ComfyUI 供工作流使用 |
+| `comfyui-skill info <workflow_id>` | 查看工作流详情和参数 schema |
+| `comfyui-skill run <workflow_id> --args '{...}'` | 执行工作流（阻塞，等待完成返回图片路径） |
+| `comfyui-skill submit <workflow_id> --args '{...}'` | 提交工作流（非阻塞，立即返回 prompt_id） |
+| `comfyui-skill status <prompt_id>` | 查询执行状态，完成后下载结果 |
+| `comfyui-skill upload <image_path>` | 上传图片到 ComfyUI 供工作流使用 |
 
 ### 工作流管理
 
 | 命令 | 说明 |
 |------|------|
-| `comfyui-skill workflow import <json>` | 从本地 JSON 导入工作流（自动检测格式、自动转换、自动生成 schema） |
+| `comfyui-skill workflow import <json_path>` | 从本地 JSON 导入工作流（自动检测格式、自动转换、自动生成 schema） |
 | `comfyui-skill workflow import --from-server` | 从 ComfyUI 服务器 userdata 导入工作流 |
-| `comfyui-skill workflow enable <id>` | 启用工作流 |
-| `comfyui-skill workflow disable <id>` | 禁用工作流 |
-| `comfyui-skill workflow delete <id>` | 删除工作流 |
+| `comfyui-skill workflow enable <workflow_id>` | 启用工作流 |
+| `comfyui-skill workflow disable <workflow_id>` | 禁用工作流 |
+| `comfyui-skill workflow delete <workflow_id>` | 删除工作流 |
 
 ### 服务器管理
 
 | 命令 | 说明 |
 |------|------|
 | `comfyui-skill server list` | 列出所有已配置的服务器 |
-| `comfyui-skill server status [id]` | 检查 ComfyUI 服务器是否在线 |
-| `comfyui-skill server add --id <id> --url <url>` | 添加新服务器 |
-| `comfyui-skill server enable <id>` | 启用服务器 |
-| `comfyui-skill server disable <id>` | 禁用服务器 |
-| `comfyui-skill server remove <id>` | 移除服务器 |
+| `comfyui-skill server status [<server_id>]` | 检查 ComfyUI 服务器是否在线 |
+| `comfyui-skill server add --id <server_id> --url <url>` | 添加新服务器 |
+| `comfyui-skill server enable <server_id>` | 启用服务器 |
+| `comfyui-skill server disable <server_id>` | 禁用服务器 |
+| `comfyui-skill server remove <server_id>` | 移除服务器 |
 
 ### 依赖管理
 
 | 命令 | 说明 |
 |------|------|
-| `comfyui-skill deps check <id>` | 检查缺失的自定义节点和模型 |
-| `comfyui-skill deps install <id> --repos '[...]'` | 通过 Manager 安装缺失的自定义节点 |
-| `comfyui-skill deps install <id> --models` | 通过 Manager 安装缺失的模型 |
-| `comfyui-skill deps install <id> --all` | 自动检测并安装所有缺失的依赖 |
+| `comfyui-skill deps check <workflow_id>` | 检查缺失的自定义节点和模型 |
+| `comfyui-skill deps install <workflow_id> --repos '[...]'` | 通过 Manager 安装缺失的自定义节点 |
+| `comfyui-skill deps install <workflow_id> --models` | 通过 Manager 安装缺失的模型 |
+| `comfyui-skill deps install <workflow_id> --all` | 自动检测并安装所有缺失的依赖 |
 
 ### 配置迁移
 
@@ -103,25 +120,17 @@ comfyui-skill run local/txt2img --args '{"prompt": "a white cat"}'
 
 | 命令 | 说明 |
 |------|------|
-| `comfyui-skill history list <id>` | 查看工作流的执行历史 |
-| `comfyui-skill history show <id> <run_id>` | 查看单次运行的详细信息 |
+| `comfyui-skill history list <workflow_id>` | 查看工作流的执行历史 |
+| `comfyui-skill history show <workflow_id> <run_id>` | 查看单次运行的详细信息 |
 
 ### 全局选项
 
 | 选项 | 说明 |
 |------|------|
 | `--json, -j` | 强制 JSON 输出 |
-| `--server, -s` | 指定服务器 ID |
-| `--dir, -d` | 指定数据目录（默认：当前目录） |
+| `--server, -s <server_id>` | 指定服务器 ID |
+| `--dir, -d <path>` | 指定数据目录（默认：当前目录） |
 | `--verbose, -v` | 详细输出 |
-
-### Skill ID 格式
-
-```bash
-comfyui-skill run local/txt2img          # server_id/workflow_id
-comfyui-skill run txt2img                # 使用默认服务器
-comfyui-skill run txt2img -s my_server   # 指定服务器
-```
 
 ### 输出模式
 
@@ -135,10 +144,10 @@ comfyui-skill run txt2img -s my_server   # 指定服务器
 
 ```bash
 # Agent 的典型调用流程
-comfyui-skill server status --json          # 1. 确认服务器在线
-comfyui-skill list --json                   # 2. 发现可用工作流
-comfyui-skill info <id> --json              # 3. 查看参数要求
-comfyui-skill run <id> --args '{...}' --json # 4. 执行
+comfyui-skill server status --json                        # 1. 确认服务器在线
+comfyui-skill list --json                                 # 2. 发现可用工作流
+comfyui-skill info local/txt2img --json                   # 3. 查看参数要求
+comfyui-skill run local/txt2img --args '{...}' --json     # 4. 执行
 ```
 
 ### 导入新工作流
@@ -148,7 +157,7 @@ comfyui-skill run <id> --args '{...}' --json # 4. 执行
 comfyui-skill workflow import ./workflow.json --check-deps --json
 
 # 安装缺失的依赖
-comfyui-skill deps install <id> --all --json
+comfyui-skill deps install local/my-workflow --all --json
 ```
 
 ## 退出码
