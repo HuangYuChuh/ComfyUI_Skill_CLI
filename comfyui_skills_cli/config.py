@@ -34,3 +34,10 @@ def get_server(config: dict[str, Any], server_id: str) -> dict[str, Any] | None:
 
 def get_default_server_id(config: dict[str, Any]) -> str:
     return config.get("default_server", "local")
+
+
+def save_config(base_dir: Path, config: dict[str, Any]) -> None:
+    config_path = base_dir / "config.json"
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+        f.write("\n")
