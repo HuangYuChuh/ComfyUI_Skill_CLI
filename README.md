@@ -25,6 +25,18 @@ Every command supports `--json` for structured output. Pipe-friendly by default.
 pipx install comfyui-skill-cli
 ```
 
+### Development Mode
+
+If you want to modify the CLI source code and have changes take effect immediately without reinstalling:
+
+```bash
+git clone https://github.com/HuangYuChuh/ComfyUI_Skill_CLI.git
+cd ComfyUI_Skill_CLI
+pipx install -e .
+```
+
+The `-e` flag (editable) links directly to your local source — any code change is reflected instantly.
+
 ## Usage
 
 Run commands from within a [ComfyUI Skills](https://github.com/HuangYuChuh/ComfyUI_Skills_OpenClaw) project directory:
