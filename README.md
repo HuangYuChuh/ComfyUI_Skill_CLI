@@ -50,17 +50,67 @@ The CLI reads `config.json` and `data/` from the current working directory.
 
 ### Commands
 
-| Command | Description |
-|---------|-------------|
-| `comfyui-skill list` | List all available skills with parameters |
-| `comfyui-skill info <id>` | Show skill details and parameter schema |
-| `comfyui-skill run <id> --args '{...}'` | Execute a skill (blocking) |
-| `comfyui-skill submit <id> --args '{...}'` | Submit a skill (non-blocking) |
-| `comfyui-skill status <prompt-id>` | Check execution status |
-| `comfyui-skill server list` | List configured servers |
-| `comfyui-skill server status` | Check if ComfyUI server is online |
-| `comfyui-skill deps check <id>` | Check missing dependencies |
-| `comfyui-skill deps install <id>` | Install missing dependencies |
+#### Workflow Discovery & Execution
+
+| Command | Description | Status |
+|---------|-------------|--------|
+| `comfyui-skill list` | List all available skills with parameters | ✅ |
+| `comfyui-skill info <id>` | Show skill details and parameter schema | ✅ |
+| `comfyui-skill run <id> --args '{...}'` | Execute a skill (blocking, returns images) | ✅ |
+| `comfyui-skill submit <id> --args '{...}'` | Submit a skill (non-blocking, returns prompt_id) | ✅ |
+| `comfyui-skill status <prompt-id>` | Check execution status and download results | ✅ |
+
+#### Server Management
+
+| Command | Description | Status |
+|---------|-------------|--------|
+| `comfyui-skill server list` | List all configured servers | ✅ |
+| `comfyui-skill server status [id]` | Check if ComfyUI server is online | ✅ |
+| `comfyui-skill server add --id <id> --url <url>` | Add a new server | 🔜 |
+| `comfyui-skill server enable <id>` | Enable a server | 🔜 |
+| `comfyui-skill server disable <id>` | Disable a server | 🔜 |
+| `comfyui-skill server remove <id>` | Remove a server | 🔜 |
+
+#### Dependency Management
+
+| Command | Description | Status |
+|---------|-------------|--------|
+| `comfyui-skill deps check <id>` | Check missing custom nodes and models | ✅ |
+| `comfyui-skill deps install <id> --repos '[...]'` | Install missing custom nodes via Manager | ✅ |
+| `comfyui-skill deps install <id> --models` | Install missing models via Manager | 🔜 |
+
+#### Workflow Management
+
+| Command | Description | Status |
+|---------|-------------|--------|
+| `comfyui-skill workflow import <json>` | Import workflow from local JSON (auto-detect format, auto-convert, auto-generate schema) | 🔜 |
+| `comfyui-skill workflow import --from-server` | Import workflows from ComfyUI server userdata | 🔜 |
+| `comfyui-skill workflow enable <id>` | Enable a workflow | 🔜 |
+| `comfyui-skill workflow disable <id>` | Disable a workflow | 🔜 |
+| `comfyui-skill workflow delete <id>` | Delete a workflow | 🔜 |
+| `comfyui-skill workflow setup <json>` | One-click: import → check deps → install → ready | 🔜 |
+
+#### Image Upload
+
+| Command | Description | Status |
+|---------|-------------|--------|
+| `comfyui-skill upload <image>` | Upload image to ComfyUI for use in workflows | 🔜 |
+
+#### Configuration Transfer
+
+| Command | Description | Status |
+|---------|-------------|--------|
+| `comfyui-skill config export --output <path>` | Export config and workflows as bundle | 🔜 |
+| `comfyui-skill config import <path>` | Import config bundle (supports --dry-run) | 🔜 |
+
+#### Execution History
+
+| Command | Description | Status |
+|---------|-------------|--------|
+| `comfyui-skill history list <id>` | List execution history for a skill | 🔜 |
+| `comfyui-skill history show <id> <run_id>` | Show details of a specific run | 🔜 |
+
+> ✅ = implemented, 🔜 = planned. See [docs/cli-roadmap.md](./docs/cli-roadmap.md) for full roadmap.
 
 ### Global Options
 
