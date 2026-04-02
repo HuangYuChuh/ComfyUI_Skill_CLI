@@ -11,6 +11,7 @@ app = typer.Typer(
     help="ComfyUI Skill CLI — Agent-friendly workflow management",
     no_args_is_help=True,
     rich_markup_mode="rich",
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
 
 
