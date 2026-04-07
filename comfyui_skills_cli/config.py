@@ -15,6 +15,19 @@ def get_base_dir(override: str = "") -> Path:
 
 def load_config(base_dir: Path) -> dict[str, Any]:
     config_path = base_dir / "config.json"
+    data_dir = base_dir / "data"
+
+    # Aggressive check for Agents: If neither config nor data exists, we are in the wrong place.
+    if not config_path.exists() and not data_dir.exists():
+        import sys
+        print(
+            f"[ERROR] comfyui-skill: No 'config.json' or 'data/' folder found in '{base_dir.resolve()}'.\n"
+            f"You are likely running this command from the wrong directory.\n"
+            f"Please 'cd' into your ComfyUI skill project root before execution.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     if not config_path.exists():
         return {"servers": []}
     with open(config_path, encoding="utf-8") as f:
