@@ -55,6 +55,16 @@ _AUTO_EXPOSE_FIELDS: dict[str, dict[str, Any]] = {
     "num": {"exposed": True, "required": False, "description": "Number of images"},
     "steps": {"exposed": True, "required": False, "description": "Generation steps"},
     "filename_prefix": {"exposed": True, "required": False, "description": "Output file prefix"},
+    # Audio parameters
+    "tags": {"exposed": True, "required": True, "description": "Music style/genre tags"},
+    "lyrics": {"exposed": True, "required": False, "description": "Song lyrics"},
+    "bpm": {"exposed": True, "required": False, "description": "Beats per minute"},
+    "duration": {"exposed": True, "required": False, "description": "Audio duration"},
+    "seconds": {"exposed": True, "required": False, "description": "Duration in seconds"},
+    "language": {"exposed": True, "required": False, "description": "Language code"},
+    "keyscale": {"exposed": True, "required": False, "description": "Musical key and scale"},
+    "cfg_scale": {"exposed": True, "required": False, "description": "Classifier-free guidance scale"},
+    "temperature": {"exposed": True, "required": False, "description": "Sampling temperature"},
 }
 
 _LOAD_IMAGE_CLASSES = {"LoadImage", "LoadImageMask"}
