@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import os
 import time
 import uuid
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 import typer
 
@@ -296,7 +299,8 @@ def _download_outputs(
             local_path = local_dir / item["filename"]
             local_path.write_bytes(data)
             item["local_path"] = str(local_path)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to download %s: %s", item["filename"], exc)
             item["local_path"] = ""
     return outputs
 

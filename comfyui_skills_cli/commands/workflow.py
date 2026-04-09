@@ -55,16 +55,20 @@ _AUTO_EXPOSE_FIELDS: dict[str, dict[str, Any]] = {
     "num": {"exposed": True, "required": False, "description": "Number of images"},
     "steps": {"exposed": True, "required": False, "description": "Generation steps"},
     "filename_prefix": {"exposed": True, "required": False, "description": "Output file prefix"},
-    # Audio parameters
-    "tags": {"exposed": True, "required": True, "description": "Music style/genre tags"},
-    "lyrics": {"exposed": True, "required": False, "description": "Song lyrics"},
-    "bpm": {"exposed": True, "required": False, "description": "Beats per minute"},
-    "duration": {"exposed": True, "required": False, "description": "Audio duration"},
-    "seconds": {"exposed": True, "required": False, "description": "Duration in seconds"},
-    "language": {"exposed": True, "required": False, "description": "Language code"},
-    "keyscale": {"exposed": True, "required": False, "description": "Musical key and scale"},
-    "cfg_scale": {"exposed": True, "required": False, "description": "Classifier-free guidance scale"},
-    "temperature": {"exposed": True, "required": False, "description": "Sampling temperature"},
+}
+
+_MEDIA_TYPE_FIELDS: dict[str, dict[str, dict[str, Any]]] = {
+    "audio": {
+        "tags": {"exposed": True, "required": True, "description": "Music style/genre tags"},
+        "lyrics": {"exposed": True, "required": False, "description": "Song lyrics"},
+        "bpm": {"exposed": True, "required": False, "description": "Beats per minute"},
+        "duration": {"exposed": True, "required": False, "description": "Audio duration"},
+        "seconds": {"exposed": True, "required": False, "description": "Duration in seconds"},
+        "language": {"exposed": True, "required": False, "description": "Language code"},
+        "keyscale": {"exposed": True, "required": False, "description": "Musical key and scale"},
+        "cfg_scale": {"exposed": True, "required": False, "description": "Classifier-free guidance scale"},
+        "temperature": {"exposed": True, "required": False, "description": "Sampling temperature"},
+    },
 }
 
 _LOAD_IMAGE_CLASSES = {"LoadImage", "LoadImageMask"}
@@ -80,8 +84,17 @@ def _get_type_guess(value: Any) -> str:
     return "string"
 
 
-def _extract_schema(workflow_data: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """Extract parameters from API-format workflow and build schema."""
+def _extract_schema(workflow_data: dict[str, Any], media_type: str = "image") -> dict[str, dict[str, Any]]:
+    """Extract parameters from API-format workflow and build schema.
+
+    *media_type* selects additional field-exposure rules beyond the base
+    set.  ``"image"`` (default) uses only the generic rules.
+    ``"audio"`` adds audio-specific fields like tags, lyrics, bpm, etc.
+    """
+    expose_fields = dict(_AUTO_EXPOSE_FIELDS)
+    if media_type in _MEDIA_TYPE_FIELDS:
+        expose_fields.update(_MEDIA_TYPE_FIELDS[media_type])
+
     raw_params: list[dict[str, Any]] = []
 
     for node_id, node in workflow_data.items():
@@ -102,8 +115,8 @@ def _extract_schema(workflow_data: dict[str, Any]) -> dict[str, dict[str, Any]]:
                 exposed, required = True, True
                 description = "Upload an image"
                 field_type = "image"
-            elif field in _AUTO_EXPOSE_FIELDS:
-                info = _AUTO_EXPOSE_FIELDS[field]
+            elif field in expose_fields:
+                info = expose_fields[field]
                 exposed = info["exposed"]
                 required = info["required"]
                 description = info["description"]
@@ -370,11 +383,18 @@ def workflow_import(
     ctx: typer.Context,
     json_path: str = typer.Argument(None, help="Path to workflow JSON file (omit when using --from-server)"),
     name: str = typer.Option("", "--name", "-n", help="Workflow ID (default: derived from filename)"),
+    media_type: str = typer.Option("image", "--type", "-t", help="Media type preset for parameter detection: image (default), audio"),
     from_server: bool = typer.Option(False, "--from-server", help="Import from ComfyUI server userdata"),
     preview: bool = typer.Option(False, "--preview", help="Preview only, don't import"),
     check_deps: bool = typer.Option(False, "--check-deps", help="Check dependencies after import"),
 ):
-    """Import a workflow from local JSON or ComfyUI server."""
+    """Import a workflow from local JSON or ComfyUI server.
+
+    Use --type to select a parameter detection preset. The default (image)
+    detects generic fields like seed, steps, and prompt. Use --type audio
+    to also detect audio-specific fields like tags, lyrics, bpm, duration,
+    keyscale, language, cfg_scale, and temperature.
+    """
     base_dir = get_base_dir(ctx.obj.get("base_dir", ""))
     config = load_config(base_dir)
     server_id = ctx.obj.get("server") or get_default_server_id(config)
@@ -385,9 +405,9 @@ def workflow_import(
         return
 
     if from_server:
-        _import_from_server(ctx, base_dir, server_id, server_config, name, preview, check_deps)
+        _import_from_server(ctx, base_dir, server_id, server_config, name, preview, check_deps, media_type)
     elif json_path:
-        _import_from_file(ctx, base_dir, server_id, server_config, json_path, name, preview, check_deps)
+        _import_from_file(ctx, base_dir, server_id, server_config, json_path, name, preview, check_deps, media_type)
     else:
         output_error(ctx, "INVALID_ARGS", "Provide a JSON file path or use --from-server.")
 
@@ -395,7 +415,7 @@ def workflow_import(
 def _import_from_file(
     ctx: typer.Context, base_dir: Path, server_id: str,
     server_config: dict[str, Any], json_path: str, name: str,
-    preview: bool, check_deps: bool,
+    preview: bool, check_deps: bool, media_type: str = "image",
 ) -> None:
     if not os.path.isfile(json_path):
         output_error(ctx, "FILE_NOT_FOUND", f'File not found: "{json_path}"')
@@ -435,7 +455,7 @@ def _import_from_file(
         return
 
     # Generate schema
-    parameters = _extract_schema(api_data)
+    parameters = _extract_schema(api_data, media_type)
 
     if preview:
         output_result(ctx, {
@@ -506,7 +526,7 @@ def _import_from_file(
 def _import_from_server(
     ctx: typer.Context, base_dir: Path, server_id: str,
     server_config: dict[str, Any], name_filter: str,
-    preview: bool, check_deps: bool,
+    preview: bool, check_deps: bool, media_type: str = "image",
 ) -> None:
     client = ComfyUIClient(
         server_url=server_config.get("url", "http://127.0.0.1:8188"),
@@ -563,7 +583,7 @@ def _import_from_server(
 
         filename = os.path.basename(wf_path)
         workflow_id = _suggest_workflow_id(api_data, filename)
-        parameters = _extract_schema(api_data)
+        parameters = _extract_schema(api_data, media_type)
 
         workflow_dir = base_dir / "data" / server_id / workflow_id
         workflow_dir.mkdir(parents=True, exist_ok=True)
