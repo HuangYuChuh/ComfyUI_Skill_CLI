@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import os
 import time
 import uuid
+from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 import typer
 
@@ -28,7 +32,7 @@ def run_cmd(
 ):
     """Execute a skill (blocking — waits for completion)."""
     base_dir, server_id, workflow_id = _resolve_skill(ctx, skill_id)
-    client, schema_data, workflow_data = _prepare(ctx, base_dir, server_id, workflow_id)
+    client, schema_data, workflow_data, server_config = _prepare(ctx, base_dir, server_id, workflow_id)
 
     input_args = _parse_args(ctx, args)
     parameters = _get_parameters(schema_data)
@@ -65,8 +69,9 @@ def run_cmd(
             status_info = history.get("status", {})
 
             if status_info.get("completed", False) or outputs:
-                images = _collect_outputs(outputs)
-                output_event(ctx, "completed", prompt_id=prompt_id, outputs=images)
+                collected = _collect_outputs(outputs)
+                collected = _download_outputs(client, collected, base_dir, server_config)
+                output_event(ctx, "completed", prompt_id=prompt_id, outputs=collected)
 
                 # Final result — json and stream-json both get this
                 if fmt == OutputFormat.STREAM_JSON:
@@ -74,7 +79,7 @@ def run_cmd(
                 output_result(ctx, {
                     "status": "success",
                     "prompt_id": prompt_id,
-                    "outputs": images,
+                    "outputs": collected,
                 })
                 return
 
@@ -118,7 +123,7 @@ def submit_cmd(
 ):
     """Submit a skill for execution (non-blocking — returns immediately)."""
     base_dir, server_id, workflow_id = _resolve_skill(ctx, skill_id)
-    client, schema_data, workflow_data = _prepare(ctx, base_dir, server_id, workflow_id)
+    client, schema_data, workflow_data, _server_config = _prepare(ctx, base_dir, server_id, workflow_id)
 
     input_args = _parse_args(ctx, args)
     parameters = _get_parameters(schema_data)
@@ -157,8 +162,8 @@ def status_cmd(
         status_info = history.get("status", {})
         outputs = history.get("outputs", {})
         if status_info.get("completed", False) or outputs:
-            images = _collect_outputs(outputs)
-            output_result(ctx, {"status": "success", "prompt_id": prompt_id, "outputs": images})
+            collected = _collect_outputs(outputs)
+            output_result(ctx, {"status": "success", "prompt_id": prompt_id, "outputs": collected})
             return
         if status_info.get("status_str") == "error":
             output_result(ctx, {"status": "error", "prompt_id": prompt_id, "error": _format_errors(history)})
@@ -203,7 +208,7 @@ def _prepare(ctx: typer.Context, base_dir: Any, server_id: str, workflow_id: str
         output_error(ctx, "SKILL_NOT_FOUND", f'Skill "{server_id}/{workflow_id}" not found.')
 
     client = _build_client(server_config)
-    return client, schema_data or {}, workflow_data
+    return client, schema_data or {}, workflow_data, server_config
 
 
 def _build_client(server_config: dict[str, Any]) -> ComfyUIClient:
@@ -249,18 +254,55 @@ def _inject_params(
     return workflow
 
 
+_MEDIA_KEYS: dict[str, str] = {
+    "images": "image",
+    "audio": "audio",
+    "gifs": "image",
+    "video": "video",
+}
+
+
 def _collect_outputs(outputs: dict[str, Any]) -> list[dict[str, str]]:
-    images = []
+    collected: list[dict[str, str]] = []
     for node_output in outputs.values():
         if not isinstance(node_output, dict):
             continue
-        for img in node_output.get("images", []):
-            images.append({
-                "filename": img.get("filename", ""),
-                "subfolder": img.get("subfolder", ""),
-                "type": img.get("type", "output"),
-            })
-    return images
+        for key, media_type in _MEDIA_KEYS.items():
+            for item in node_output.get(key, []):
+                collected.append({
+                    "filename": item.get("filename", ""),
+                    "subfolder": item.get("subfolder", ""),
+                    "type": item.get("type", "output"),
+                    "media_type": media_type,
+                })
+    return collected
+
+
+def _download_outputs(
+    client: ComfyUIClient,
+    outputs: list[dict[str, str]],
+    base_dir: Path,
+    server_config: dict[str, Any],
+) -> list[dict[str, str]]:
+    raw_dir = str(server_config.get("output_dir", "./outputs")).strip() or "./outputs"
+    output_dir = Path(raw_dir) if Path(raw_dir).is_absolute() else base_dir / raw_dir
+    for item in outputs:
+        try:
+            data = client.download_output(
+                item["filename"],
+                item.get("subfolder", ""),
+                item.get("type", "output"),
+            )
+            subfolder = item.get("subfolder", "")
+            local_dir = output_dir / subfolder if subfolder else output_dir
+            local_dir.mkdir(parents=True, exist_ok=True)
+            local_path = local_dir / item["filename"]
+            local_path.write_bytes(data)
+            item["local_path"] = str(local_path)
+        except Exception as exc:
+            logger.warning("Failed to download %s: %s", item["filename"], exc)
+            item["local_path"] = ""
+    return outputs
 
 
 def _format_errors(history: dict[str, Any]) -> str:
