@@ -1,42 +1,63 @@
-# ComfyUI Skill CLI
-
 <div align="center">
-<pre>
-+--------------------------------------------------+
-|                                                  |
-|      ____                 __       _   _ ___     |
-|     / ___|___  _ __ ___  / _|_   _| | | |_ _|    |
-|    | |   / _ \| '_ ` _ \| |_| | | | | | || |     |
-|    | |__| (_) | | | | | |  _| |_| | |_| || |     |
-|     \____\___/|_| |_| |_|_|  \__, |\___/|___|    |
-|                              |___/               |
-|        ____  _    _ _ _    ____ _     ___        |
-|       / ___|| | _(_) | |  / ___| |   |_ _|       |
-|       \___ \| |/ / | | | | |   | |    | |        |
-|        ___) |   <| | | | | |___| |___ | |        |
-|       |____/|_|\_\_|_|_|  \____|_____|___|       |
-|                                                  |
-+--------------------------------------------------+
-</pre>
+
+  <h1>ComfyUI Skill CLI</h1>
+
+  <p><strong>Agent-friendly command-line tool for managing and executing ComfyUI workflow skills.</strong></p>
+
+  <p>
+    Any AI agent that can run shell commands (Claude Code, Codex, OpenClaw, etc.) can use ComfyUI through this CLI.
+  </p>
+
+  <p>
+    <a href="https://pypi.org/project/comfyui-skill-cli/"><img src="https://img.shields.io/pypi/v/comfyui-skill-cli?style=flat&color=4F46E5&logo=pypi&logoColor=white" alt="PyPI"></a>
+    <a href="https://github.com/HuangYuChuh/ComfyUI_Skill_CLI/blob/main/LICENSE"><img src="https://img.shields.io/github/license/HuangYuChuh/ComfyUI_Skill_CLI?style=flat&color=10B981" alt="License"></a>
+    <a href="https://www.python.org/"><img src="https://img.shields.io/static/v1?label=Python&message=3.10%2B&color=3B82F6&style=flat&logo=python&logoColor=white" alt="Python 3.10+"></a>
+    <a href="https://github.com/HuangYuChuh/ComfyUI_Skill_CLI/stargazers"><img src="https://img.shields.io/github/stars/HuangYuChuh/ComfyUI_Skill_CLI?style=flat&color=EAB308&logo=github" alt="GitHub stars"></a>
+  </p>
+
+  <p>
+    <a href="#install">Install</a> ·
+    <a href="#quick-start">Quick Start</a> ·
+    <a href="#commands">Commands</a> ·
+    <a href="#for-ai-agents">For AI Agents</a>
+  </p>
+
+  <p>
+    <strong>English</strong> ·
+    <a href="./README.zh.md">简体中文</a>
+  </p>
+
 </div>
 
-[中文版](./README.zh.md) | [English](./README.md)
-
-Agent-friendly command-line tool for managing and executing [ComfyUI](https://github.com/comfyanonymous/ComfyUI) workflow skills. Any AI agent that can run shell commands (Claude, Codex, OpenClaw, etc.) can use ComfyUI through this CLI.
-
-[Install](#install) · [Quick Start](#quick-start) · [Commands](#commands) · [For AI Agents](#for-ai-agents)
+---
 
 ## Why comfyui-skill?
 
-- **Agent-native** — structured JSON output, pipe-friendly, designed for AI agents to call
-- **Zero config** — reads `config.json` and `data/` from the current directory, no setup needed
-- **Full lifecycle** — discover, import, execute, manage workflows and dependencies in one tool
-- **Multi-server** — manage multiple ComfyUI instances, route jobs to different hardware
+| Capability | Why it matters |
+|------------|----------------|
+| **Agent-native** | Structured JSON output, pipe-friendly, designed for AI agents to call |
+| **Zero config** | Reads `config.json` and `data/` from the current directory, no setup needed |
+| **Full lifecycle** | Discover, import, execute, cancel, manage workflows and dependencies in one tool |
+| **Multi-server** | Manage multiple ComfyUI instances, route jobs to different hardware |
+| **Error guidance** | Common failures (OOM, unauthorized, missing models) return actionable hints |
 
+<a id="install"></a>
 ## Install
 
 ```bash
 pipx install comfyui-skill-cli
+```
+
+Or with pip:
+
+```bash
+pip install comfyui-skill-cli
+```
+
+### Update
+
+```bash
+pipx upgrade comfyui-skill-cli
 ```
 
 ### Development Mode
@@ -47,14 +68,7 @@ cd ComfyUI_Skill_CLI
 pipx install -e .
 ```
 
-The `-e` flag (editable) links directly to your local source — any code change is reflected instantly.
-
-### Update
-
-```bash
-pipx upgrade comfyui-skill-cli
-```
-
+<a id="quick-start"></a>
 ## Quick Start
 
 ```bash
@@ -75,21 +89,15 @@ Every command supports `--json` for structured output.
 
 ## ID Convention
 
-This CLI uses two types of IDs:
-
-| Notation | Meaning | Example |
-|----------|---------|---------|
-| `<workflow_id>` | Workflow identifier, format: `server_id/workflow_name` | `local/txt2img` |
-| `<server_id>` | Server identifier | `local`, `remote-a100` |
-
-When `<workflow_id>` omits the server prefix, the default server is used:
+Workflows are addressed as `<server_id>/<workflow_id>`:
 
 ```bash
 comfyui-skill run local/txt2img          # explicit server
 comfyui-skill run txt2img                # uses default server
-comfyui-skill run txt2img -s my_server   # override server via flag
+comfyui-skill run txt2img -s my_server   # override with --server flag
 ```
 
+<a id="commands"></a>
 ## Commands
 
 ### Workflow Discovery & Execution
@@ -97,105 +105,126 @@ comfyui-skill run txt2img -s my_server   # override server via flag
 | Command | Description |
 |---------|-------------|
 | `comfyui-skill list` | List all available workflows with parameters |
-| `comfyui-skill info <workflow_id>` | Show workflow details and parameter schema |
-| `comfyui-skill run <workflow_id> --args '{...}'` | Execute a workflow (blocking, returns images) |
-| `comfyui-skill submit <workflow_id> --args '{...}'` | Submit a workflow (non-blocking, returns prompt_id) |
+| `comfyui-skill info <id>` | Show workflow details and parameter schema |
+| `comfyui-skill run <id> --args '{...}'` | Execute a workflow (blocking) |
+| `comfyui-skill submit <id> --args '{...}'` | Submit a workflow (non-blocking) |
 | `comfyui-skill status <prompt_id>` | Check execution status and download results |
-| `comfyui-skill upload <image_path>` | Upload image to ComfyUI for use in workflows |
+| `comfyui-skill cancel <prompt_id>` | Cancel a running or queued job |
+| `comfyui-skill upload <file>` | Upload a file to ComfyUI for use in workflows |
+| `comfyui-skill upload --from-output <prompt_id>` | Chain a previous run's output as input for the next workflow |
+
+### Queue & Resource Management
+
+| Command | Description |
+|---------|-------------|
+| `comfyui-skill queue list` | Show running and pending jobs |
+| `comfyui-skill queue clear` | Clear all pending jobs |
+| `comfyui-skill queue delete <prompt_id>...` | Remove specific jobs from queue |
+| `comfyui-skill free` | Release GPU memory and unload models |
+| `comfyui-skill free --models` | Unload models only |
+| `comfyui-skill free --memory` | Free cached memory only |
+
+### Model Discovery
+
+| Command | Description |
+|---------|-------------|
+| `comfyui-skill models list` | List all available model folders |
+| `comfyui-skill models list <folder>` | List models in a specific folder (e.g., `checkpoints`, `loras`) |
 
 ### Workflow Management
 
 | Command | Description |
 |---------|-------------|
-| `comfyui-skill workflow import <json_path>` | Import workflow from local JSON (auto-detect format, auto-convert, auto-generate schema) |
-| `comfyui-skill workflow import --from-server` | Import workflows from ComfyUI server userdata |
-| `comfyui-skill workflow enable <workflow_id>` | Enable a workflow |
-| `comfyui-skill workflow disable <workflow_id>` | Disable a workflow |
-| `comfyui-skill workflow delete <workflow_id>` | Delete a workflow |
+| `comfyui-skill workflow import <path>` | Import workflow (auto-detect format, auto-generate schema) |
+| `comfyui-skill workflow import --from-server` | Import from ComfyUI server userdata |
+| `comfyui-skill workflow enable <id>` | Enable a workflow |
+| `comfyui-skill workflow disable <id>` | Disable a workflow |
+| `comfyui-skill workflow delete <id>` | Delete a workflow |
 
 ### Server Management
 
 | Command | Description |
 |---------|-------------|
 | `comfyui-skill server list` | List all configured servers |
-| `comfyui-skill server status [<server_id>]` | Check if ComfyUI server is online |
-| `comfyui-skill server add --id <server_id> --url <url>` | Add a new server |
-| `comfyui-skill server enable <server_id>` | Enable a server |
-| `comfyui-skill server disable <server_id>` | Disable a server |
-| `comfyui-skill server remove <server_id>` | Remove a server |
+| `comfyui-skill server status` | Check if ComfyUI server is online |
+| `comfyui-skill server add --id <id> --url <url>` | Add a new server |
+| `comfyui-skill server enable/disable <id>` | Toggle server availability |
+| `comfyui-skill server remove <id>` | Remove a server |
 
 ### Dependency Management
 
 | Command | Description |
 |---------|-------------|
-| `comfyui-skill deps check <workflow_id>` | Check missing custom nodes and models |
-| `comfyui-skill deps install <workflow_id> --repos '[...]'` | Install missing custom nodes via Manager |
-| `comfyui-skill deps install <workflow_id> --models` | Install missing models via Manager |
-| `comfyui-skill deps install <workflow_id> --all` | Auto-detect and install all missing deps |
+| `comfyui-skill deps check <id>` | Check missing custom nodes and models |
+| `comfyui-skill deps install <id> --all` | Auto-detect and install all missing deps |
+| `comfyui-skill deps install <id> --repos '[...]'` | Install specific custom nodes |
+| `comfyui-skill deps install <id> --models` | Install missing models via Manager |
 
-### Configuration Transfer
+### Configuration & History
 
 | Command | Description |
 |---------|-------------|
 | `comfyui-skill config export --output <path>` | Export config and workflows as bundle |
-| `comfyui-skill config import <path>` | Import config bundle (supports --dry-run) |
-
-### Execution History
-
-| Command | Description |
-|---------|-------------|
-| `comfyui-skill history list <workflow_id>` | List execution history for a workflow |
-| `comfyui-skill history show <workflow_id> <run_id>` | Show details of a specific run |
+| `comfyui-skill config import <path>` | Import config bundle (supports `--dry-run`) |
+| `comfyui-skill history list <id>` | List execution history |
+| `comfyui-skill history show <id> <run_id>` | Show details of a specific run |
 
 ### Global Options
 
 | Option | Description |
 |--------|-------------|
 | `--json, -j` | Force JSON output |
-| `--server, -s <server_id>` | Specify server ID |
-| `--dir, -d <path>` | Specify data directory (default: current directory) |
+| `--output-format` | Output format: `text`, `json`, `stream-json` |
+| `--server, -s` | Specify server ID |
+| `--dir, -d` | Specify data directory (default: current directory) |
 | `--verbose, -v` | Verbose output |
+| `--no-update-check` | Skip automatic CLI update check |
 
 ### Output Modes
 
-- **TTY** → Rich tables and progress bars (human-friendly)
-- **Pipe / `--json`** → Structured JSON (agent-friendly)
-- **Errors** → Always stderr
+| Mode | When | Format |
+|------|------|--------|
+| Text | TTY terminal | Rich tables and progress bars |
+| JSON | Pipe or `--json` | Single JSON result |
+| Stream JSON | `--output-format stream-json` | NDJSON events in real time |
+| Errors | Always | stderr |
 
+<a id="for-ai-agents"></a>
 ## For AI Agents
 
-This CLI is designed to be called from `SKILL.md` definitions:
+This CLI is designed to be called from `SKILL.md` definitions. A typical agent workflow:
 
 ```bash
-# Typical agent workflow
-comfyui-skill server status --json                        # 1. verify server is online
-comfyui-skill list --json                                 # 2. discover available workflows
-comfyui-skill info local/txt2img --json                   # 3. check required parameters
-comfyui-skill run local/txt2img --args '{...}' --json     # 4. execute
+comfyui-skill server status --json                    # 1. verify server
+comfyui-skill list --json                             # 2. discover workflows
+comfyui-skill info local/txt2img --json               # 3. check parameters
+comfyui-skill run local/txt2img --args '{...}' --json # 4. execute
 ```
 
-### Import a new workflow
+### Workflow chaining (multi-step pipelines)
 
 ```bash
-# Import and check dependencies in one step
-comfyui-skill workflow import ./workflow.json --check-deps --json
+# Run first workflow
+comfyui-skill run local/txt2img --args '{"prompt": "a cat"}' --json
 
-# Install missing dependencies
+# Chain output into next workflow
+comfyui-skill upload --from-output <prompt_id> --json
+comfyui-skill run local/upscale --args '{"image": "<uploaded_name>"}' --json
+```
+
+### Import and validate
+
+```bash
+comfyui-skill workflow import ./workflow.json --check-deps --json
 comfyui-skill deps install local/my-workflow --all --json
 ```
 
-## Exit Codes
+## Contributing
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Invalid arguments |
-| 3 | Server connection failed |
-| 4 | Resource not found |
-| 5 | Execution failed |
-| 6 | Timeout |
+Contributions are welcome! Please read the [Contributing Guide](https://github.com/HuangYuChuh/ComfyUI_Skills_OpenClaw/blob/main/CONTRIBUTING.md) in the main repository for design principles and PR workflow.
 
-## Compatibility
+## Resources
 
-Built with [Typer](https://typer.tiangolo.com/), the same framework as [comfy-cli](https://github.com/Comfy-Org/comfy-cli). Designed to be integrated as a `comfy skills` subcommand in the future.
+- [ComfyUI Skills OpenClaw](https://github.com/HuangYuChuh/ComfyUI_Skills_OpenClaw) — Main skills repository
+- [ComfyUI](https://github.com/comfyanonymous/ComfyUI) — The backend this CLI orchestrates
+- [Typer](https://typer.tiangolo.com/) — CLI framework used by this project
