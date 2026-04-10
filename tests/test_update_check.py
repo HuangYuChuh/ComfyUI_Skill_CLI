@@ -18,6 +18,12 @@ class UpdateCheckTests(unittest.TestCase):
             update_check.maybe_notify_update("0.2.3", disabled=True)
         latest.assert_not_called()
 
+    def test_json_modes_are_machine_output(self) -> None:
+        self.assertTrue(update_check.is_machine_output(True, ""))
+        self.assertTrue(update_check.is_machine_output(False, "json"))
+        self.assertTrue(update_check.is_machine_output(False, "stream-json"))
+        self.assertFalse(update_check.is_machine_output(False, "text"))
+
     def test_notify_prints_upgrade_hint_to_stderr(self) -> None:
         with (
             patch.object(update_check, "_latest_version_to_check", return_value="9.9.9"),

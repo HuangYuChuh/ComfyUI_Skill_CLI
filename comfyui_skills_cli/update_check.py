@@ -22,6 +22,15 @@ UPDATE_CHECK_ERROR_TTL_SECONDS = 60 * 60
 UPDATE_CHECK_TIMEOUT_SECONDS = 2
 
 
+def is_machine_output(json_output: bool, output_format: str) -> bool:
+    fmt = output_format.strip().lower()
+    if json_output or fmt in {"json", "stream-json"}:
+        return True
+    if fmt:
+        return False
+    return not sys.stdout.isatty()
+
+
 def maybe_notify_update(current_version: str, *, disabled: bool = False) -> None:
     """Print a non-blocking update hint to stderr when a newer PyPI version exists."""
     if disabled or _env_truthy(NO_UPDATE_CHECK_ENV):

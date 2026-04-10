@@ -6,7 +6,7 @@ import typer
 
 from . import __version__
 from .commands import config, deps, history, run, server, skill, upload, workflow
-from .update_check import maybe_notify_update
+from .update_check import is_machine_output, maybe_notify_update
 
 app = typer.Typer(
     name="comfyui-skill",
@@ -42,7 +42,10 @@ def main(
     ctx.obj["verbose"] = verbose
     ctx.obj["no_update_check"] = no_update_check
 
-    maybe_notify_update(__version__, disabled=no_update_check)
+    maybe_notify_update(
+        __version__,
+        disabled=no_update_check or is_machine_output(json_output, output_format),
+    )
 
 
 # Subcommand groups — each needs a callback to inherit parent context
