@@ -6,6 +6,7 @@ import typer
 
 from . import __version__
 from .commands import config, deps, history, run, server, skill, upload, workflow
+from .update_check import is_machine_output, maybe_notify_update
 
 app = typer.Typer(
     name="comfyui-skill",
@@ -31,6 +32,7 @@ def main(
     server_id: str = typer.Option("", "--server", "-s", help="Server ID"),
     base_dir: str = typer.Option("", "--dir", "-d", help="Data directory (default: current directory)"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+    no_update_check: bool = typer.Option(False, "--no-update-check", help="Skip automatic CLI update check"),
 ):
     ctx.ensure_object(dict)
     ctx.obj["json"] = json_output
@@ -38,6 +40,12 @@ def main(
     ctx.obj["server"] = server_id
     ctx.obj["base_dir"] = base_dir
     ctx.obj["verbose"] = verbose
+    ctx.obj["no_update_check"] = no_update_check
+
+    maybe_notify_update(
+        __version__,
+        disabled=no_update_check or is_machine_output(json_output, output_format),
+    )
 
 
 # Subcommand groups — each needs a callback to inherit parent context
