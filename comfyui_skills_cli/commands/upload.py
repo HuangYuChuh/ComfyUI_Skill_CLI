@@ -1,4 +1,4 @@
-"""comfyui-skill upload — upload images to ComfyUI server."""
+"""comfyui-skill upload — upload files to ComfyUI server."""
 
 from __future__ import annotations
 
@@ -13,11 +13,11 @@ from ..output import output_error, output_result
 
 def upload_cmd(
     ctx: typer.Context,
-    image_path: str = typer.Argument(help="Path to image file"),
+    file_path: str = typer.Argument(help="Path to file (image, mask, audio, etc.)"),
 ):
-    """Upload an image to ComfyUI for use in workflows."""
-    if not os.path.isfile(image_path):
-        output_error(ctx, "FILE_NOT_FOUND", f'Image file not found: "{image_path}"')
+    """Upload a file to ComfyUI for use in workflows (e.g., images, masks, audio)."""
+    if not os.path.isfile(file_path):
+        output_error(ctx, "FILE_NOT_FOUND", f'File not found: "{file_path}"')
         return
 
     base_dir = get_base_dir(ctx.obj.get("base_dir", ""))
@@ -35,7 +35,7 @@ def upload_cmd(
     )
 
     try:
-        result = client.upload_image(image_path)
+        result = client.upload_file(file_path)
         output_result(ctx, {
             "name": result.get("name", ""),
             "subfolder": result.get("subfolder", ""),

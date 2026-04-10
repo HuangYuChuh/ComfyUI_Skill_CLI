@@ -126,13 +126,43 @@ class ComfyUIClient:
         except (requests.RequestException, ValueError):
             return None
 
-    # -- Image upload --
+    # -- Queue management --
 
-    def upload_image(self, filepath: str) -> dict[str, Any]:
+    def interrupt(self, prompt_id: str = "") -> dict[str, Any]:
+        payload = {"prompt_id": prompt_id} if prompt_id else {}
+        resp = self._post("/interrupt", json_data=payload)
+        resp.raise_for_status()
+        return {"success": True}
+
+    def queue_delete(self, prompt_ids: list[str]) -> dict[str, Any]:
+        resp = self._post("/queue", json_data={"delete": prompt_ids})
+        resp.raise_for_status()
+        return {"success": True}
+
+    def queue_clear(self) -> dict[str, Any]:
+        resp = self._post("/queue", json_data={"clear": True})
+        resp.raise_for_status()
+        return {"success": True}
+
+    # -- Memory management --
+
+    def free_memory(self, unload_models: bool = False, free_memory: bool = False) -> dict[str, Any]:
+        payload: dict[str, Any] = {}
+        if unload_models:
+            payload["unload_models"] = True
+        if free_memory:
+            payload["free_memory"] = True
+        resp = self._post("/free", json_data=payload)
+        resp.raise_for_status()
+        return {"success": True}
+
+    # -- File upload --
+
+    def upload_file(self, filepath: str) -> dict[str, Any]:
         import mimetypes
         import os
         filename = os.path.basename(filepath)
-        content_type = mimetypes.guess_type(filepath)[0] or "image/png"
+        content_type = mimetypes.guess_type(filepath)[0] or "application/octet-stream"
         with open(filepath, "rb") as f:
             content = f.read()
 
@@ -153,6 +183,9 @@ class ComfyUIClient:
         )
         resp.raise_for_status()
         return resp.json()
+
+    def upload_image(self, filepath: str) -> dict[str, Any]:
+        return self.upload_file(filepath)
 
     # -- ComfyUI Userdata API --
 
