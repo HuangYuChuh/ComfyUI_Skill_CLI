@@ -6,4 +6,9 @@ build/
 .eggs/
 .venv/
 venv/
+.env/
 .DS_Store
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

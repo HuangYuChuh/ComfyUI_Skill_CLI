@@ -18,6 +18,7 @@ import typer
 from ..client import ComfyUIClient
 from ..config import get_base_dir, get_default_server_id, get_server, load_config
 from ..output import OutputFormat, get_output_format, is_machine_mode, output_error, output_event, output_result
+from ..error_hints import match_error_hint
 from ..storage import get_schema, get_workflow_data
 
 _POLL_INITIAL = 1.0
@@ -85,8 +86,9 @@ def run_cmd(
 
             if status_info.get("status_str") == "error":
                 error_msg = _format_errors(history)
+                hint = match_error_hint(error_msg)
                 output_event(ctx, "error", prompt_id=prompt_id, message=error_msg)
-                output_error(ctx, "EXECUTION_FAILED", error_msg)
+                output_error(ctx, "EXECUTION_FAILED", error_msg, hint=hint)
                 return
 
         # Check queue position
@@ -166,7 +168,12 @@ def status_cmd(
             output_result(ctx, {"status": "success", "prompt_id": prompt_id, "outputs": collected})
             return
         if status_info.get("status_str") == "error":
-            output_result(ctx, {"status": "error", "prompt_id": prompt_id, "error": _format_errors(history)})
+            error_msg = _format_errors(history)
+            hint = match_error_hint(error_msg)
+            result: dict[str, Any] = {"status": "error", "prompt_id": prompt_id, "error": error_msg}
+            if hint:
+                result["hint"] = hint
+            output_result(ctx, result)
             return
 
     # Check queue
