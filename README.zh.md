@@ -1,37 +1,45 @@
-# ComfyUI Skill CLI
-
 <div align="center">
-<pre>
-+--------------------------------------------------+
-|                                                  |
-|      ____                 __       _   _ ___     |
-|     / ___|___  _ __ ___  / _|_   _| | | |_ _|    |
-|    | |   / _ \| '_ ` _ \| |_| | | | | | || |     |
-|    | |__| (_) | | | | | |  _| |_| | |_| || |     |
-|     \____\___/|_| |_| |_|_|  \__, |\___/|___|    |
-|                              |___/               |
-|        ____  _    _ _ _    ____ _     ___        |
-|       / ___|| | _(_) | |  / ___| |   |_ _|       |
-|       \___ \| |/ / | | | | |   | |    | |        |
-|        ___) |   <| | | | | |___| |___ | |        |
-|       |____/|_|\_\_|_|_|  \____|_____|___|       |
-|                                                  |
-+--------------------------------------------------+
-</pre>
+
+  <h1>ComfyUI Skill CLI</h1>
+
+  <p><strong>面向 AI Agent 的 ComfyUI 工作流命令行工具</strong></p>
+
+  <p>
+    任何能执行 Shell 命令的 AI Agent（Claude Code、Codex、OpenClaw 等）都可以通过这个 CLI 调用 ComfyUI。
+  </p>
+
+  <p>
+    <a href="https://pypi.org/project/comfyui-skill-cli/"><img src="https://img.shields.io/pypi/v/comfyui-skill-cli?style=flat&color=4F46E5&logo=pypi&logoColor=white" alt="PyPI"></a>
+    <a href="https://github.com/HuangYuChuh/ComfyUI_Skill_CLI/blob/main/LICENSE"><img src="https://img.shields.io/github/license/HuangYuChuh/ComfyUI_Skill_CLI?style=flat&color=10B981" alt="License"></a>
+    <a href="https://www.python.org/"><img src="https://img.shields.io/static/v1?label=Python&message=3.10%2B&color=3B82F6&style=flat&logo=python&logoColor=white" alt="Python 3.10+"></a>
+    <a href="https://github.com/HuangYuChuh/ComfyUI_Skill_CLI/stargazers"><img src="https://img.shields.io/github/stars/HuangYuChuh/ComfyUI_Skill_CLI?style=flat&color=EAB308&logo=github" alt="GitHub stars"></a>
+  </p>
+
+  <p>
+    <a href="#安装">安装</a> ·
+    <a href="#快速开始">快速开始</a> ·
+    <a href="#命令">命令</a> ·
+    <a href="#ai-agent-使用">AI Agent 使用</a>
+  </p>
+
+  <p>
+    <a href="./README.md">English</a> ·
+    <strong>简体中文</strong>
+  </p>
+
 </div>
 
-[中文版](./README.zh.md) | [English](./README.md)
-
-面向 AI Agent 的 ComfyUI 工作流命令行工具。任何能执行 Shell 命令的 AI Agent（Claude、Codex、OpenClaw 等）都可以通过这个 CLI 调用 ComfyUI。
-
-[安装](#安装) · [快速开始](#快速开始) · [命令](#命令) · [AI Agent 使用](#ai-agent-使用)
+---
 
 ## 为什么选 comfyui-skill？
 
-- **为 Agent 原生设计** — 结构化 JSON 输出，管道友好，专为 AI Agent 调用优化
-- **零配置** — 从当前目录读取 `config.json` 和 `data/`，开箱即用
-- **全生命周期管理** — 发现、导入、执行、管理工作流和依赖，一个工具搞定
-- **多服务器** — 同时管理多台 ComfyUI 实例，按需分发任务到不同算力
+| 能力 | 价值 |
+|------|------|
+| **Agent 原生** | 结构化 JSON 输出，管道友好，专为 AI Agent 调用优化 |
+| **零配置** | 从当前目录读取 `config.json` 和 `data/`，开箱即用 |
+| **全生命周期** | 发现、导入、执行、取消、管理工作流和依赖，一个工具搞定 |
+| **多服务器** | 同时管理多台 ComfyUI 实例，按需分发任务到不同算力 |
+| **错误引导** | 常见失败（显存不足、未授权、模型缺失）自动返回可操作的提示 |
 
 ## 安装
 
@@ -39,22 +47,24 @@
 pipx install comfyui-skill-cli
 ```
 
-### 开发模式
-
-如果你想修改 CLI 源码并让改动立刻生效：
+或用 pip：
 
 ```bash
-git clone https://github.com/HuangYuChuh/ComfyUI_Skill_CLI.git
-cd ComfyUI_Skill_CLI
-pipx install -e .
+pip install comfyui-skill-cli
 ```
-
-`-e`（editable）会直接链接到本地源码，改完代码无需重新安装。
 
 ### 更新
 
 ```bash
 pipx upgrade comfyui-skill-cli
+```
+
+### 开发模式
+
+```bash
+git clone https://github.com/HuangYuChuh/ComfyUI_Skill_CLI.git
+cd ComfyUI_Skill_CLI
+pipx install -e .
 ```
 
 ## 快速开始
@@ -66,7 +76,7 @@ cd /path/to/your-skills-project
 # 2. 检查服务器状态
 comfyui-skill server status
 
-# 3. 查看可用的工作流
+# 3. 查看可用工作流
 comfyui-skill list
 
 # 4. 执行工作流
@@ -77,14 +87,7 @@ comfyui-skill run local/txt2img --args '{"prompt": "a white cat"}'
 
 ## ID 约定
 
-CLI 中有两种 ID，请注意区分：
-
-| 标记 | 含义 | 示例 |
-|------|------|------|
-| `<workflow_id>` | 工作流标识，格式为 `服务器ID/工作流名称` | `local/txt2img` |
-| `<server_id>` | 服务器标识 | `local`、`remote-a100` |
-
-当 `<workflow_id>` 省略服务器前缀时，自动使用默认服务器：
+工作流使用 `<server_id>/<workflow_id>` 格式：
 
 ```bash
 comfyui-skill run local/txt2img          # 指定服务器
@@ -99,105 +102,125 @@ comfyui-skill run txt2img -s my_server   # 通过 --server 指定
 | 命令 | 说明 |
 |------|------|
 | `comfyui-skill list` | 列出所有可用工作流及参数 |
-| `comfyui-skill info <workflow_id>` | 查看工作流详情和参数 schema |
-| `comfyui-skill run <workflow_id> --args '{...}'` | 执行工作流（阻塞，等待完成返回图片路径） |
-| `comfyui-skill submit <workflow_id> --args '{...}'` | 提交工作流（非阻塞，立即返回 prompt_id） |
-| `comfyui-skill status <prompt_id>` | 查询执行状态，完成后下载结果 |
-| `comfyui-skill upload <image_path>` | 上传图片到 ComfyUI 供工作流使用 |
+| `comfyui-skill info <id>` | 查看工作流详情和参数 schema |
+| `comfyui-skill run <id> --args '{...}'` | 执行工作流（阻塞） |
+| `comfyui-skill submit <id> --args '{...}'` | 提交工作流（非阻塞） |
+| `comfyui-skill status <prompt_id>` | 查询执行状态 |
+| `comfyui-skill cancel <prompt_id>` | 取消运行中或排队中的任务 |
+| `comfyui-skill upload <file>` | 上传文件到 ComfyUI 供工作流使用 |
+| `comfyui-skill upload --from-output <prompt_id>` | 将上次运行的输出作为下一个工作流的输入 |
+
+### 队列与资源管理
+
+| 命令 | 说明 |
+|------|------|
+| `comfyui-skill queue list` | 查看运行中和排队中的任务 |
+| `comfyui-skill queue clear` | 清空排队中的任务 |
+| `comfyui-skill queue delete <prompt_id>...` | 从队列删除指定任务 |
+| `comfyui-skill free` | 释放 GPU 显存并卸载模型 |
+| `comfyui-skill free --models` | 仅卸载模型 |
+| `comfyui-skill free --memory` | 仅释放缓存 |
+
+### 模型发现
+
+| 命令 | 说明 |
+|------|------|
+| `comfyui-skill models list` | 列出所有模型文件夹 |
+| `comfyui-skill models list <folder>` | 列出指定文件夹中的模型（如 `checkpoints`、`loras`） |
 
 ### 工作流管理
 
 | 命令 | 说明 |
 |------|------|
-| `comfyui-skill workflow import <json_path>` | 从本地 JSON 导入工作流（自动检测格式、自动转换、自动生成 schema） |
-| `comfyui-skill workflow import --from-server` | 从 ComfyUI 服务器 userdata 导入工作流 |
-| `comfyui-skill workflow enable <workflow_id>` | 启用工作流 |
-| `comfyui-skill workflow disable <workflow_id>` | 禁用工作流 |
-| `comfyui-skill workflow delete <workflow_id>` | 删除工作流 |
+| `comfyui-skill workflow import <path>` | 导入工作流（自动检测格式、自动生成 schema） |
+| `comfyui-skill workflow import --from-server` | 从 ComfyUI 服务器导入 |
+| `comfyui-skill workflow enable <id>` | 启用工作流 |
+| `comfyui-skill workflow disable <id>` | 禁用工作流 |
+| `comfyui-skill workflow delete <id>` | 删除工作流 |
 
 ### 服务器管理
 
 | 命令 | 说明 |
 |------|------|
 | `comfyui-skill server list` | 列出所有已配置的服务器 |
-| `comfyui-skill server status [<server_id>]` | 检查 ComfyUI 服务器是否在线 |
-| `comfyui-skill server add --id <server_id> --url <url>` | 添加新服务器 |
-| `comfyui-skill server enable <server_id>` | 启用服务器 |
-| `comfyui-skill server disable <server_id>` | 禁用服务器 |
-| `comfyui-skill server remove <server_id>` | 移除服务器 |
+| `comfyui-skill server status` | 检查 ComfyUI 服务器是否在线 |
+| `comfyui-skill server add --id <id> --url <url>` | 添加新服务器 |
+| `comfyui-skill server enable/disable <id>` | 启用/禁用服务器 |
+| `comfyui-skill server remove <id>` | 移除服务器 |
 
 ### 依赖管理
 
 | 命令 | 说明 |
 |------|------|
-| `comfyui-skill deps check <workflow_id>` | 检查缺失的自定义节点和模型 |
-| `comfyui-skill deps install <workflow_id> --repos '[...]'` | 通过 Manager 安装缺失的自定义节点 |
-| `comfyui-skill deps install <workflow_id> --models` | 通过 Manager 安装缺失的模型 |
-| `comfyui-skill deps install <workflow_id> --all` | 自动检测并安装所有缺失的依赖 |
+| `comfyui-skill deps check <id>` | 检查缺失的自定义节点和模型 |
+| `comfyui-skill deps install <id> --all` | 自动检测并安装所有缺失依赖 |
+| `comfyui-skill deps install <id> --repos '[...]'` | 安装指定的自定义节点 |
+| `comfyui-skill deps install <id> --models` | 通过 Manager 安装缺失模型 |
 
-### 配置迁移
-
-| 命令 | 说明 |
-|------|------|
-| `comfyui-skill config export --output <path>` | 导出配置和工作流为 bundle |
-| `comfyui-skill config import <path>` | 导入 bundle（支持 --dry-run 预览） |
-
-### 执行历史
+### 配置与历史
 
 | 命令 | 说明 |
 |------|------|
-| `comfyui-skill history list <workflow_id>` | 查看工作流的执行历史 |
-| `comfyui-skill history show <workflow_id> <run_id>` | 查看单次运行的详细信息 |
+| `comfyui-skill config export --output <path>` | 导出配置和工作流 |
+| `comfyui-skill config import <path>` | 导入配置（支持 `--dry-run`） |
+| `comfyui-skill history list <id>` | 查看执行历史 |
+| `comfyui-skill history show <id> <run_id>` | 查看单次运行详情 |
 
 ### 全局选项
 
 | 选项 | 说明 |
 |------|------|
 | `--json, -j` | 强制 JSON 输出 |
-| `--server, -s <server_id>` | 指定服务器 ID |
-| `--dir, -d <path>` | 指定数据目录（默认：当前目录） |
+| `--output-format` | 输出格式：`text`、`json`、`stream-json` |
+| `--server, -s` | 指定服务器 ID |
+| `--dir, -d` | 指定数据目录（默认：当前目录） |
 | `--verbose, -v` | 详细输出 |
+| `--no-update-check` | 跳过自动更新检查 |
 
 ### 输出模式
 
-- **终端（TTY）** → Rich 表格 + 进度条（人类友好）
-- **管道 / `--json`** → 结构化 JSON（Agent 友好）
-- **错误** → 始终输出到 stderr
+| 模式 | 场景 | 格式 |
+|------|------|------|
+| Text | 终端 TTY | Rich 表格和进度条 |
+| JSON | 管道或 `--json` | 单次 JSON 结果 |
+| Stream JSON | `--output-format stream-json` | 实时 NDJSON 事件流 |
+| 错误 | 始终 | stderr |
 
 ## AI Agent 使用
 
-这个 CLI 专为 `SKILL.md` 调用场景设计：
+这个 CLI 专为 `SKILL.md` 调用场景设计。Agent 的典型流程：
 
 ```bash
-# Agent 的典型调用流程
-comfyui-skill server status --json                        # 1. 确认服务器在线
-comfyui-skill list --json                                 # 2. 发现可用工作流
-comfyui-skill info local/txt2img --json                   # 3. 查看参数要求
-comfyui-skill run local/txt2img --args '{...}' --json     # 4. 执行
+comfyui-skill server status --json                    # 1. 确认服务器
+comfyui-skill list --json                             # 2. 发现工作流
+comfyui-skill info local/txt2img --json               # 3. 查看参数
+comfyui-skill run local/txt2img --args '{...}' --json # 4. 执行
 ```
 
-### 导入新工作流
+### 工作流串联（多步管线）
 
 ```bash
-# 导入并检查依赖
-comfyui-skill workflow import ./workflow.json --check-deps --json
+# 执行第一个工作流
+comfyui-skill run local/txt2img --args '{"prompt": "a cat"}' --json
 
-# 安装缺失的依赖
+# 将输出串联到下一个工作流
+comfyui-skill upload --from-output <prompt_id> --json
+comfyui-skill run local/upscale --args '{"image": "<uploaded_name>"}' --json
+```
+
+### 导入并验证
+
+```bash
+comfyui-skill workflow import ./workflow.json --check-deps --json
 comfyui-skill deps install local/my-workflow --all --json
 ```
 
-## 退出码
+## 贡献
 
-| 代码 | 含义 |
-|------|------|
-| 0 | 成功 |
-| 1 | 一般错误 |
-| 2 | 参数无效 |
-| 3 | 服务器连接失败 |
-| 4 | 资源未找到 |
-| 5 | 执行失败 |
-| 6 | 超时 |
+欢迎贡献！请阅读主仓库的 [Contributing Guide](https://github.com/HuangYuChuh/ComfyUI_Skills_OpenClaw/blob/main/CONTRIBUTING.md) 了解设计原则和 PR 流程。
 
-## 兼容性
+## 相关资源
 
-基于 [Typer](https://typer.tiangolo.com/) 构建，与 [comfy-cli](https://github.com/Comfy-Org/comfy-cli) 使用相同框架。未来计划作为 `comfy skills` 子命令集成。
+- [ComfyUI Skills OpenClaw](https://github.com/HuangYuChuh/ComfyUI_Skills_OpenClaw) — 主仓库（Skills 定义）
+- [ComfyUI](https://github.com/comfyanonymous/ComfyUI) — 本 CLI 调度的后端
+- [Typer](https://typer.tiangolo.com/) — 本项目使用的 CLI 框架
