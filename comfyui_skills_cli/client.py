@@ -91,6 +91,11 @@ class ComfyUIClient:
         resp.raise_for_status()
         return resp.json()
 
+    def get_model_folders(self) -> list[str]:
+        resp = self._get("/models")
+        resp.raise_for_status()
+        return resp.json()
+
     def get_models(self, folder: str) -> list[str]:
         resp = self._get(f"/models/{folder}")
         resp.raise_for_status()

@@ -5,7 +5,7 @@ from __future__ import annotations
 import typer
 
 from . import __version__
-from .commands import cancel, config, deps, free, history, queue, run, server, skill, upload, workflow
+from .commands import cancel, config, deps, free, history, models, queue, run, server, skill, upload, workflow
 from .update_check import is_machine_output, maybe_notify_update
 
 app = typer.Typer(
@@ -49,7 +49,7 @@ def main(
 
 
 # Subcommand groups — each needs a callback to inherit parent context
-for sub_app in [config.app, deps.app, history.app, queue.app, server.app, workflow.app]:
+for sub_app in [config.app, deps.app, history.app, models.app, queue.app, server.app, workflow.app]:
     @sub_app.callback()
     def _pass_context(ctx: typer.Context):
         if ctx.parent and ctx.parent.obj:
@@ -57,6 +57,7 @@ for sub_app in [config.app, deps.app, history.app, queue.app, server.app, workfl
             ctx.obj.update(ctx.parent.obj)
 
 app.add_typer(config.app, name="config", help="Import/export configuration")
+app.add_typer(models.app, name="models", help="Discover available models")
 app.add_typer(deps.app, name="deps", help="Manage dependencies")
 app.add_typer(history.app, name="history", help="Execution history")
 app.add_typer(queue.app, name="queue", help="View and manage execution queue")
