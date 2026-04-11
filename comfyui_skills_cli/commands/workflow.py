@@ -69,6 +69,19 @@ _MEDIA_TYPE_FIELDS: dict[str, dict[str, dict[str, Any]]] = {
         "cfg_scale": {"exposed": True, "required": False, "description": "Classifier-free guidance scale"},
         "temperature": {"exposed": True, "required": False, "description": "Sampling temperature"},
     },
+    "video": {
+        "noise_seed": {"exposed": True, "required": False, "description": "Random seed"},
+        "cfg": {"exposed": True, "required": False, "description": "Classifier-free guidance scale"},
+        "value": {"exposed": True, "required": False, "description": "Node parameter value"},
+        "format": {"exposed": True, "required": False, "description": "Output format"},
+        "codec": {"exposed": True, "required": False, "description": "Video codec"},
+        "strength": {"exposed": True, "required": False, "description": "Effect strength"},
+        "strength_model": {"exposed": True, "required": False, "description": "LoRA model strength"},
+        "strength_clip": {"exposed": True, "required": False, "description": "LoRA CLIP strength"},
+        "img_compression": {"exposed": True, "required": False, "description": "Image compression level"},
+        "longer_edge": {"exposed": True, "required": False, "description": "Resolution by longer edge"},
+        "max_length": {"exposed": True, "required": False, "description": "Max prompt token length"},
+    },
 }
 
 _LOAD_IMAGE_CLASSES = {"LoadImage", "LoadImageMask"}
@@ -383,7 +396,7 @@ def workflow_import(
     ctx: typer.Context,
     json_path: str = typer.Argument(None, help="Path to workflow JSON file (omit when using --from-server)"),
     name: str = typer.Option("", "--name", "-n", help="Workflow ID (default: derived from filename)"),
-    media_type: str = typer.Option("image", "--type", "-t", help="Media type preset for parameter detection: image (default), audio"),
+    media_type: str = typer.Option("image", "--type", "-t", help="Media type preset for parameter detection: image (default), audio, video"),
     from_server: bool = typer.Option(False, "--from-server", help="Import from ComfyUI server userdata"),
     preview: bool = typer.Option(False, "--preview", help="Preview only, don't import"),
     check_deps: bool = typer.Option(False, "--check-deps", help="Check dependencies after import"),
@@ -393,7 +406,9 @@ def workflow_import(
     Use --type to select a parameter detection preset. The default (image)
     detects generic fields like seed, steps, and prompt. Use --type audio
     to also detect audio-specific fields like tags, lyrics, bpm, duration,
-    keyscale, language, cfg_scale, and temperature.
+    keyscale, language, cfg_scale, and temperature. Use --type video to
+    detect video-specific fields like noise_seed, cfg, format, codec,
+    strength, and Primitive node values (prompt, width, height, etc.).
     """
     base_dir = get_base_dir(ctx.obj.get("base_dir", ""))
     config = load_config(base_dir)

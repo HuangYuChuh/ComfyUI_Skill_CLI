@@ -264,9 +264,24 @@ def _inject_params(
 _MEDIA_KEYS: dict[str, str] = {
     "images": "image",
     "audio": "audio",
-    "gifs": "image",
-    "video": "video",
 }
+
+_VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".avi", ".mkv"}
+_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".ogg", ".opus", ".aac"}
+
+
+def _infer_media_type(filename: str, key_hint: str) -> str:
+    """Infer accurate media type from file extension, falling back to the
+    history key hint.  ComfyUI's SaveVideo uses the ``"images"`` key for
+    video files, so the key alone is not reliable."""
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in _VIDEO_EXTENSIONS:
+        return "video"
+    if ext in _AUDIO_EXTENSIONS:
+        return "audio"
+    if key_hint == "audio":
+        return "audio"
+    return "image"
 
 
 def _collect_outputs(outputs: dict[str, Any]) -> list[dict[str, str]]:
@@ -274,13 +289,14 @@ def _collect_outputs(outputs: dict[str, Any]) -> list[dict[str, str]]:
     for node_output in outputs.values():
         if not isinstance(node_output, dict):
             continue
-        for key, media_type in _MEDIA_KEYS.items():
+        for key, key_hint in _MEDIA_KEYS.items():
             for item in node_output.get(key, []):
+                filename = item.get("filename", "")
                 collected.append({
-                    "filename": item.get("filename", ""),
+                    "filename": filename,
                     "subfolder": item.get("subfolder", ""),
                     "type": item.get("type", "output"),
-                    "media_type": media_type,
+                    "media_type": _infer_media_type(filename, key_hint),
                 })
     return collected
 
