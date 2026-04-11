@@ -24,7 +24,9 @@
 
   <p>
     <a href="./README.md">English</a> ·
-    <strong>简体中文</strong>
+    <strong>简体中文</strong> ·
+    <a href="./README.zh-TW.md">繁體中文</a> ·
+    <a href="./README.ja.md">日本語</a>
   </p>
 
 </div>
@@ -221,6 +223,10 @@ comfyui-skill deps install local/my-workflow --all --json
 
 ## 相关资源
 
+<<<<<<< HEAD
 - [ComfyUI Skills OpenClaw](https://github.com/HuangYuChuh/ComfyUI_Skills_OpenClaw) — 主仓库（Skills 定义）
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI) — 本 CLI 调度的后端
 - [Typer](https://typer.tiangolo.com/) — 本项目使用的 CLI 框架
+=======
+基于 [Typer](https://typer.tiangolo.com/) 构建，与 [comfy-cli](https://github.com/Comfy-Org/comfy-cli) 使用相同框架。未来计划作为 `comfy skills` 子命令集成。
+>>>>>>> 246e194 (docs: add zh-TW and ja readmes)
