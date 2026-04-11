@@ -41,6 +41,9 @@ def run_cmd(
     # Inject parameters into workflow
     workflow = _inject_params(workflow_data, parameters, input_args)
 
+    # Upload image files before submitting
+    _upload_media(client, workflow, parameters, input_args)
+
     # Submit
     try:
         result = client.queue_prompt(workflow)
@@ -130,6 +133,9 @@ def submit_cmd(
     input_args = _parse_args(ctx, args)
     parameters = _get_parameters(schema_data)
     workflow = _inject_params(workflow_data, parameters, input_args)
+
+    # Upload image files before submitting
+    _upload_media(client, workflow, parameters, input_args)
 
     try:
         result = client.queue_prompt(workflow)
@@ -259,6 +265,38 @@ def _inject_params(
         if node_id in workflow and isinstance(workflow[node_id], dict) and "inputs" in workflow[node_id]:
             workflow[node_id]["inputs"][field] = value
     return workflow
+
+
+def _upload_media(
+    client: "ComfyUIClient",
+    workflow: dict[str, Any],
+    parameters: dict[str, Any],
+    args: dict[str, Any],
+) -> None:
+    """Upload image/audio/video files and replace paths with uploaded filenames."""
+    for key, value in args.items():
+        if key not in parameters:
+            continue
+        param = parameters[key]
+        if param.get("type") != "image":
+            continue
+        if not isinstance(value, str) or not value:
+            continue
+        # Already a plain filename (no path separator) — skip
+        if "/" not in value and "\\" not in value:
+            continue
+        # Upload the file
+        try:
+            result = client.upload_image(value)
+            uploaded_name = result.get("name", "")
+            if uploaded_name:
+                node_id = str(param.get("node_id", ""))
+                field = param.get("field", "")
+                if node_id in workflow and isinstance(workflow[node_id], dict) and "inputs" in workflow[node_id]:
+                    workflow[node_id]["inputs"][field] = uploaded_name
+                    logger.info("Uploaded %s → %s (node %s.%s)", value, uploaded_name, node_id, field)
+        except Exception as exc:
+            logger.warning("Failed to upload %s: %s", value, exc)
 
 
 _MEDIA_KEYS: dict[str, str] = {
