@@ -41,6 +41,8 @@
 | **零配置** | 从当前目录读取 `config.json` 和 `data/`，开箱即用 |
 | **全生命周期** | 发现、导入、执行、取消、管理工作流和依赖，一个工具搞定 |
 | **多服务器** | 同时管理多台 ComfyUI 实例，按需分发任务到不同算力 |
+| **模型发现** | 直接从目标服务器查看模型目录和可用模型名称 |
+| **多工作流管理** | 支持批量导入、启用、禁用、删除和迁移多套工作流 |
 | **错误引导** | 常见失败（显存不足、未授权、模型缺失）自动返回可操作的提示 |
 
 ## 安装
@@ -107,7 +109,7 @@ comfyui-skill run txt2img -s my_server   # 通过 --server 指定
 | `comfyui-skill info <id>` | 查看工作流详情和参数 schema |
 | `comfyui-skill run <id> --args '{...}'` | 执行工作流（阻塞） |
 | `comfyui-skill submit <id> --args '{...}'` | 提交工作流（非阻塞） |
-| `comfyui-skill status <prompt_id>` | 查询执行状态 |
+| `comfyui-skill status <prompt_id>` | 查询执行状态并显示已发现的结果 |
 | `comfyui-skill cancel <prompt_id>` | 取消运行中或排队中的任务 |
 | `comfyui-skill upload <file>` | 上传文件到 ComfyUI 供工作流使用 |
 | `comfyui-skill upload --from-output <prompt_id>` | 将上次运行的输出作为下一个工作流的输入 |
@@ -135,7 +137,7 @@ comfyui-skill run txt2img -s my_server   # 通过 --server 指定
 | 命令 | 说明 |
 |------|------|
 | `comfyui-skill workflow import <path>` | 导入工作流（自动检测格式、自动生成 schema） |
-| `comfyui-skill workflow import --from-server` | 从 ComfyUI 服务器导入 |
+| `comfyui-skill workflow import --from-server` | 从 ComfyUI 服务器 userdata 导入一个或多个工作流 |
 | `comfyui-skill workflow enable <id>` | 启用工作流 |
 | `comfyui-skill workflow disable <id>` | 禁用工作流 |
 | `comfyui-skill workflow delete <id>` | 删除工作流 |
@@ -187,6 +189,53 @@ comfyui-skill run txt2img -s my_server   # 通过 --server 指定
 | JSON | 管道或 `--json` | 单次 JSON 结果 |
 | Stream JSON | `--output-format stream-json` | 实时 NDJSON 事件流 |
 | 错误 | 始终 | stderr |
+
+## 常见管理场景
+
+### 查看服务器上的模型
+
+```bash
+comfyui-skill models list
+comfyui-skill models list checkpoints
+comfyui-skill models list loras
+```
+
+当你需要确认模型名称，再写进工作流或 schema 时，这组命令最直接。
+
+### 管理多套工作流
+
+```bash
+# 预览 ComfyUI 服务器 userdata 中可导入的工作流
+comfyui-skill workflow import --from-server --preview
+
+# 从服务器导入匹配名称的工作流
+comfyui-skill workflow import --from-server --name sdxl
+
+# 临时禁用或重新启用工作流
+comfyui-skill workflow disable local/old-flow
+comfyui-skill workflow enable local/old-flow
+
+# 删除不再需要暴露的工作流
+comfyui-skill workflow delete local/old-flow
+```
+
+### 在不同机器之间迁移工作流包
+
+```bash
+comfyui-skill config export --output ./bundle.json --portable-only
+comfyui-skill config import ./bundle.json --dry-run
+comfyui-skill config import ./bundle.json --apply-environment
+```
+
+如果你要一次迁移多套工作流，而不是逐个手动重新导入，这组命令会更高效。
+
+### 运行前检查模型和依赖
+
+```bash
+comfyui-skill deps check local/txt2img
+comfyui-skill deps install local/txt2img --models
+comfyui-skill deps install local/txt2img --all
+```
 
 ## AI Agent 使用
 

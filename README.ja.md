@@ -41,6 +41,8 @@
 | **ゼロ設定** | カレントディレクトリの `config.json` と `data/` を読み込むため、すぐに使い始められます |
 | **ライフサイクル全体をカバー** | ワークフローの発見、インポート、実行、キャンセル、依存関係の管理まで 1 つのツールで対応できます |
 | **マルチサーバー対応** | 複数の ComfyUI インスタンスをまとめて管理し、ジョブを適切なハードウェアに振り分けられます |
+| **モデル探索** | 対象サーバー上のモデルフォルダと利用可能なモデル名を直接確認できます |
+| **複数ワークフロー管理** | 複数のワークフローをまとめてインポート、有効化、無効化、削除、移行できます |
 | **エラーガイダンス** | OOM、認証失敗、モデル不足など、よくある失敗に対して対処しやすいヒントを返します |
 
 ## インストール
@@ -107,7 +109,7 @@ comfyui-skill run txt2img -s my_server   # --server で上書き
 | `comfyui-skill info <id>` | ワークフロー詳細とパラメータ schema を表示 |
 | `comfyui-skill run <id> --args '{...}'` | ワークフローを実行（同期） |
 | `comfyui-skill submit <id> --args '{...}'` | ワークフローを送信（非同期） |
-| `comfyui-skill status <prompt_id>` | 実行状態を確認し、結果を取得 |
+| `comfyui-skill status <prompt_id>` | 実行状態を確認し、見つかった結果を表示 |
 | `comfyui-skill cancel <prompt_id>` | 実行中または待機中のジョブをキャンセル |
 | `comfyui-skill upload <file>` | ワークフローで使うためのファイルを ComfyUI にアップロード |
 | `comfyui-skill upload --from-output <prompt_id>` | 前回実行の出力を次のワークフロー入力として再利用 |
@@ -135,7 +137,7 @@ comfyui-skill run txt2img -s my_server   # --server で上書き
 | コマンド | 説明 |
 |----------|------|
 | `comfyui-skill workflow import <path>` | ワークフローをインポート（形式自動判別、schema 自動生成） |
-| `comfyui-skill workflow import --from-server` | ComfyUI サーバーからインポート |
+| `comfyui-skill workflow import --from-server` | ComfyUI サーバーの userdata から 1 つ以上のワークフローをインポート |
 | `comfyui-skill workflow enable <id>` | ワークフローを有効化 |
 | `comfyui-skill workflow disable <id>` | ワークフローを無効化 |
 | `comfyui-skill workflow delete <id>` | ワークフローを削除 |
@@ -187,6 +189,53 @@ comfyui-skill run txt2img -s my_server   # --server で上書き
 | JSON | パイプまたは `--json` | 単一の JSON 結果 |
 | Stream JSON | `--output-format stream-json` | リアルタイム NDJSON イベント |
 | Errors | 常に | stderr |
+
+## よくある管理タスク
+
+### サーバー上のモデルを確認する
+
+```bash
+comfyui-skill models list
+comfyui-skill models list checkpoints
+comfyui-skill models list loras
+```
+
+ワークフローや schema に書く前にモデル名を確認したいときに便利です。
+
+### 複数のワークフローを管理する
+
+```bash
+# ComfyUI サーバー userdata にあるワークフローをプレビュー
+comfyui-skill workflow import --from-server --preview
+
+# 名前に一致するワークフローをサーバーから取り込む
+comfyui-skill workflow import --from-server --name sdxl
+
+# 一時的に無効化 / 再度有効化
+comfyui-skill workflow disable local/old-flow
+comfyui-skill workflow enable local/old-flow
+
+# もう公開しないワークフローを削除
+comfyui-skill workflow delete local/old-flow
+```
+
+### ワークフローバンドルを別マシンへ移す
+
+```bash
+comfyui-skill config export --output ./bundle.json --portable-only
+comfyui-skill config import ./bundle.json --dry-run
+comfyui-skill config import ./bundle.json --apply-environment
+```
+
+複数のワークフローを一度に移したい場合は、個別に再インポートするよりこの方法の方が効率的です。
+
+### 実行前にモデルと依存関係を確認する
+
+```bash
+comfyui-skill deps check local/txt2img
+comfyui-skill deps install local/txt2img --models
+comfyui-skill deps install local/txt2img --all
+```
 
 ## AI エージェント向け
 
