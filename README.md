@@ -41,6 +41,8 @@
 | **Zero config** | Reads `config.json` and `data/` from the current directory, no setup needed |
 | **Full lifecycle** | Discover, import, execute, cancel, manage workflows and dependencies in one tool |
 | **Multi-server** | Manage multiple ComfyUI instances, route jobs to different hardware |
+| **Model discovery** | Inspect model folders and available model names directly from the target server |
+| **Workflow fleet management** | Import, enable, disable, delete, and migrate multiple workflows across machines |
 | **Error guidance** | Common failures (OOM, unauthorized, missing models) return actionable hints |
 
 <a id="install"></a>
@@ -110,7 +112,7 @@ comfyui-skill run txt2img -s my_server   # override with --server flag
 | `comfyui-skill info <id>` | Show workflow details and parameter schema |
 | `comfyui-skill run <id> --args '{...}'` | Execute a workflow (blocking) |
 | `comfyui-skill submit <id> --args '{...}'` | Submit a workflow (non-blocking) |
-| `comfyui-skill status <prompt_id>` | Check execution status and download results |
+| `comfyui-skill status <prompt_id>` | Check execution status and show discovered results |
 | `comfyui-skill cancel <prompt_id>` | Cancel a running or queued job |
 | `comfyui-skill upload <file>` | Upload a file to ComfyUI for use in workflows |
 | `comfyui-skill upload --from-output <prompt_id>` | Chain a previous run's output as input for the next workflow |
@@ -138,7 +140,7 @@ comfyui-skill run txt2img -s my_server   # override with --server flag
 | Command | Description |
 |---------|-------------|
 | `comfyui-skill workflow import <path>` | Import workflow (auto-detect format, auto-generate schema) |
-| `comfyui-skill workflow import --from-server` | Import from ComfyUI server userdata |
+| `comfyui-skill workflow import --from-server` | Import one or more workflows from ComfyUI server userdata |
 | `comfyui-skill workflow enable <id>` | Enable a workflow |
 | `comfyui-skill workflow disable <id>` | Disable a workflow |
 | `comfyui-skill workflow delete <id>` | Delete a workflow |
@@ -190,6 +192,53 @@ comfyui-skill run txt2img -s my_server   # override with --server flag
 | JSON | Pipe or `--json` | Single JSON result |
 | Stream JSON | `--output-format stream-json` | NDJSON events in real time |
 | Errors | Always | stderr |
+
+## Common Management Tasks
+
+### Inspect models on a server
+
+```bash
+comfyui-skill models list
+comfyui-skill models list checkpoints
+comfyui-skill models list loras
+```
+
+Use this when you need to confirm model names before wiring them into a workflow or schema.
+
+### Manage multiple workflows
+
+```bash
+# Preview workflows available in ComfyUI server userdata
+comfyui-skill workflow import --from-server --preview
+
+# Import matching workflows from the server
+comfyui-skill workflow import --from-server --name sdxl
+
+# Temporarily disable or re-enable a workflow
+comfyui-skill workflow disable local/old-flow
+comfyui-skill workflow enable local/old-flow
+
+# Remove a workflow you no longer want to expose
+comfyui-skill workflow delete local/old-flow
+```
+
+### Move workflow bundles between machines
+
+```bash
+comfyui-skill config export --output ./bundle.json --portable-only
+comfyui-skill config import ./bundle.json --dry-run
+comfyui-skill config import ./bundle.json --apply-environment
+```
+
+Use this when you want to migrate many workflows at once instead of re-importing them manually.
+
+### Check models and dependencies before running
+
+```bash
+comfyui-skill deps check local/txt2img
+comfyui-skill deps install local/txt2img --models
+comfyui-skill deps install local/txt2img --all
+```
 
 <a id="for-ai-agents"></a>
 ## For AI Agents

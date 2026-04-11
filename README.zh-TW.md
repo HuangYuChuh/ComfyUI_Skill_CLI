@@ -41,6 +41,8 @@
 | **零設定** | 從目前目錄讀取 `config.json` 和 `data/`，幾乎開箱即用 |
 | **完整生命週期** | 發現、匯入、執行、取消，以及管理工作流程與依賴，全都整合在同一個工具裡 |
 | **多伺服器** | 同時管理多台 ComfyUI 實例，依需求把任務分派到不同硬體 |
+| **模型探索** | 直接從目標伺服器查看模型資料夾與可用模型名稱 |
+| **多工作流程管理** | 支援批次匯入、啟用、停用、刪除與遷移多套工作流程 |
 | **錯誤引導** | 常見失敗（顯存不足、未授權、模型缺失）都會回傳可操作的提示 |
 
 ## 安裝
@@ -107,7 +109,7 @@ comfyui-skill run txt2img -s my_server   # 透過 --server 覆寫
 | `comfyui-skill info <id>` | 查看工作流程詳情與參數 schema |
 | `comfyui-skill run <id> --args '{...}'` | 執行工作流程（阻塞） |
 | `comfyui-skill submit <id> --args '{...}'` | 提交工作流程（非阻塞） |
-| `comfyui-skill status <prompt_id>` | 查詢執行狀態並下載結果 |
+| `comfyui-skill status <prompt_id>` | 查詢執行狀態並顯示已找到的結果 |
 | `comfyui-skill cancel <prompt_id>` | 取消執行中或排隊中的任務 |
 | `comfyui-skill upload <file>` | 上傳檔案到 ComfyUI，供工作流程使用 |
 | `comfyui-skill upload --from-output <prompt_id>` | 將前一次執行的輸出串接成下一個工作流程的輸入 |
@@ -135,7 +137,7 @@ comfyui-skill run txt2img -s my_server   # 透過 --server 覆寫
 | 命令 | 說明 |
 |------|------|
 | `comfyui-skill workflow import <path>` | 匯入工作流程（自動偵測格式、自動產生 schema） |
-| `comfyui-skill workflow import --from-server` | 從 ComfyUI 伺服器匯入 |
+| `comfyui-skill workflow import --from-server` | 從 ComfyUI 伺服器 userdata 匯入一個或多個工作流程 |
 | `comfyui-skill workflow enable <id>` | 啟用工作流程 |
 | `comfyui-skill workflow disable <id>` | 停用工作流程 |
 | `comfyui-skill workflow delete <id>` | 刪除工作流程 |
@@ -187,6 +189,53 @@ comfyui-skill run txt2img -s my_server   # 透過 --server 覆寫
 | JSON | 管線或 `--json` | 單次 JSON 結果 |
 | Stream JSON | `--output-format stream-json` | 即時 NDJSON 事件流 |
 | 錯誤 | 一律 | stderr |
+
+## 常見管理情境
+
+### 查看伺服器上的模型
+
+```bash
+comfyui-skill models list
+comfyui-skill models list checkpoints
+comfyui-skill models list loras
+```
+
+當你需要先確認模型名稱，再寫進工作流程或 schema 時，這組命令最直接。
+
+### 管理多套工作流程
+
+```bash
+# 預覽 ComfyUI 伺服器 userdata 中可匯入的工作流程
+comfyui-skill workflow import --from-server --preview
+
+# 從伺服器匯入符合名稱的工作流程
+comfyui-skill workflow import --from-server --name sdxl
+
+# 暫時停用或重新啟用工作流程
+comfyui-skill workflow disable local/old-flow
+comfyui-skill workflow enable local/old-flow
+
+# 刪除不再需要對外暴露的工作流程
+comfyui-skill workflow delete local/old-flow
+```
+
+### 在不同機器之間遷移工作流程包
+
+```bash
+comfyui-skill config export --output ./bundle.json --portable-only
+comfyui-skill config import ./bundle.json --dry-run
+comfyui-skill config import ./bundle.json --apply-environment
+```
+
+如果你想一次遷移多套工作流程，而不是逐一手動重新匯入，這組命令會更有效率。
+
+### 執行前檢查模型與依賴
+
+```bash
+comfyui-skill deps check local/txt2img
+comfyui-skill deps install local/txt2img --models
+comfyui-skill deps install local/txt2img --all
+```
 
 ## AI Agent 使用
 
