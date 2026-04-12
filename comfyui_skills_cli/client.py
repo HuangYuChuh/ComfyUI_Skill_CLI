@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from typing import Any
+from typing import Any, Generator
 
 import requests
 
@@ -52,16 +52,19 @@ class ComfyUIClient:
 
     # -- Prompt execution --
 
-    def queue_prompt(self, workflow: dict[str, Any]) -> dict[str, Any]:
+    def queue_prompt(self, workflow: dict[str, Any], client_id: str | None = None) -> dict[str, Any]:
+        cid = client_id or str(uuid.uuid4())
         payload: dict[str, Any] = {
             "prompt": workflow,
-            "client_id": str(uuid.uuid4()),
+            "client_id": cid,
         }
         if self.comfy_api_key:
             payload["extra_data"] = {"api_key_comfy_org": self.comfy_api_key}
         resp = self._post("/prompt", json_data=payload)
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        data["client_id"] = cid
+        return data
 
     def get_history(self, prompt_id: str) -> dict[str, Any] | None:
         resp = self._get(f"/history/{prompt_id}")
@@ -74,6 +77,34 @@ class ComfyUIClient:
         resp = self._get("/queue")
         resp.raise_for_status()
         return resp.json()
+
+    def ws_events(self, client_id: str, prompt_id: str) -> Generator[dict[str, Any], None, None]:
+        import websocket
+        ws_url = self.server_url.replace("http://", "ws://").replace("https://", "wss://")
+        ws = websocket.create_connection(
+            f"{ws_url}/ws?clientId={client_id}",
+            timeout=self.timeout,
+        )
+        ws.settimeout(None)
+        try:
+            while True:
+                opcode, raw = ws.recv_data()
+                if opcode == websocket.ABNF.OPCODE_BINARY:
+                    continue
+                if opcode != websocket.ABNF.OPCODE_TEXT:
+                    continue
+                msg = json.loads(raw)
+                event_type = msg.get("type", "")
+                data = msg.get("data", {})
+                if data.get("prompt_id") and data["prompt_id"] != prompt_id:
+                    continue
+                yield {"type": event_type, "data": data}
+                if event_type in ("execution_error", "execution_interrupted"):
+                    break
+                if event_type == "executing" and data.get("node") is None:
+                    break
+        finally:
+            ws.close()
 
     def download_output(self, filename: str, subfolder: str = "", output_type: str = "output") -> bytes:
         resp = self._get("/view", params={
@@ -90,6 +121,14 @@ class ComfyUIClient:
         resp = self._get("/object_info")
         resp.raise_for_status()
         return resp.json()
+
+    def get_object_info_node(self, node_class: str) -> dict[str, Any] | None:
+        resp = self._get(f"/object_info/{node_class}")
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get(node_class)
 
     def get_model_folders(self) -> list[str]:
         resp = self._get("/models")
