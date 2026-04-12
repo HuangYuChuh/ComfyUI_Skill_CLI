@@ -59,6 +59,66 @@ def server_status(
     })
 
 
+def _fmt_bytes(n: int) -> str:
+    """Format bytes as human-readable GB."""
+    return f"{n / (1024 ** 3):.1f} GB"
+
+
+@app.command("stats")
+def server_stats(
+    ctx: typer.Context,
+    server_id: str = typer.Argument("", help="Server ID (default: default server)"),
+    all_servers: bool = typer.Option(False, "--all", help="Query all enabled servers"),
+):
+    """Show detailed system stats (RAM, VRAM, versions) for a ComfyUI server."""
+    from ..output import get_output_format, is_machine_mode, OutputFormat
+    from rich.console import Console
+
+    base_dir = get_base_dir(ctx.obj.get("base_dir", ""))
+    config = load_config(base_dir)
+
+    if all_servers:
+        servers_list = [s for s in get_servers(config) if s.get("enabled", True)]
+    else:
+        sid = server_id or ctx.obj.get("server") or get_default_server_id(config)
+        server_config = get_server(config, sid)
+        if not server_config:
+            output_error(ctx, "SERVER_NOT_FOUND", f'Server "{sid}" not found.',
+                         hint="Run `comfy-skills server list` to see configured servers.")
+            return
+        servers_list = [server_config]
+
+    results = []
+    for srv in servers_list:
+        sid = srv.get("id", "")
+        client = ComfyUIClient(
+            server_url=srv.get("url", "http://127.0.0.1:8188"),
+            auth=srv.get("auth", ""),
+        )
+        try:
+            stats = client.get_system_stats()
+            results.append({"server_id": sid, **stats})
+        except Exception as exc:
+            results.append({"server_id": sid, "error": str(exc)})
+
+    if is_machine_mode(ctx):
+        output_result(ctx, results if all_servers else results[0])
+    else:
+        console = Console()
+        for entry in results:
+            if "error" in entry:
+                console.print(f"[bold]{entry['server_id']}:[/bold] [red]offline[/red] — {entry['error']}")
+                continue
+            system = entry.get("system", {})
+            devices = entry.get("devices", [])
+            console.print(f"[bold]Server:[/bold] {entry['server_id']}")
+            console.print(f"  OS: {system.get('os', '?')}  |  ComfyUI: {system.get('comfyui_version', '?')}  |  Python: {system.get('python_version', '?')}  |  PyTorch: {system.get('pytorch_version', '?')}")
+            console.print(f"  RAM: {_fmt_bytes(system.get('ram_total', 0))} total, {_fmt_bytes(system.get('ram_free', 0))} free")
+            for dev in devices:
+                console.print(f"  Device [{dev.get('name', '?')}]: VRAM {_fmt_bytes(dev.get('vram_total', 0))} total, {_fmt_bytes(dev.get('vram_free', 0))} free")
+            console.print()
+
+
 _INVALID_ID_PATTERN = re.compile(r"[/\\.\s]")
 
 
