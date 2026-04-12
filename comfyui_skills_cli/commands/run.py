@@ -171,6 +171,7 @@ def status_cmd(
         outputs = history.get("outputs", {})
         if status_info.get("completed", False) or outputs:
             collected = _collect_outputs(outputs)
+            collected = _download_outputs(client, collected, base_dir, server_config)
             output_result(ctx, {"status": "success", "prompt_id": prompt_id, "outputs": collected})
             return
         if status_info.get("status_str") == "error":
