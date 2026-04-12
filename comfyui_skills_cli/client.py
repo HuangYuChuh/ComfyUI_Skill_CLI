@@ -50,14 +50,21 @@ class ComfyUIClient:
         except (requests.RequestException, ValueError) as exc:
             return {"status": "offline", "error": str(exc)}
 
+    def get_system_stats(self) -> dict[str, Any]:
+        resp = self._get("/system_stats")
+        resp.raise_for_status()
+        return resp.json()
+
     # -- Prompt execution --
 
-    def queue_prompt(self, workflow: dict[str, Any], client_id: str | None = None) -> dict[str, Any]:
+    def queue_prompt(self, workflow: dict[str, Any], client_id: str | None = None, targets: list[str] | None = None) -> dict[str, Any]:
         cid = client_id or str(uuid.uuid4())
         payload: dict[str, Any] = {
             "prompt": workflow,
             "client_id": cid,
         }
+        if targets:
+            payload["partial_execution_targets"] = [[t] for t in targets]
         if self.comfy_api_key:
             payload["extra_data"] = {"api_key_comfy_org": self.comfy_api_key}
         resp = self._post("/prompt", json_data=payload)
@@ -72,6 +79,26 @@ class ComfyUIClient:
             return None
         data = resp.json()
         return data.get(prompt_id)
+
+    def get_history_list(self, max_items: int = 20, offset: int = 0) -> dict[str, Any]:
+        resp = self._get("/history", params={"max_items": max_items, "offset": offset})
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_jobs(self, status: str = "", limit: int = 20, offset: int = 0, sort_by: str = "created_at", sort_order: str = "desc") -> dict[str, Any]:
+        params: dict[str, Any] = {"limit": limit, "offset": offset, "sort_by": sort_by, "sort_order": sort_order}
+        if status:
+            params["status"] = status
+        resp = self._get("/api/jobs", params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_job(self, job_id: str) -> dict[str, Any] | None:
+        resp = self._get(f"/api/jobs/{job_id}")
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        return resp.json()
 
     def get_queue(self) -> dict[str, Any]:
         resp = self._get("/queue")
