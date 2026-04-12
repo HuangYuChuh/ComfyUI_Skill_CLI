@@ -39,6 +39,8 @@ def run_cmd(
     skill_id: str = typer.Argument(help="Skill ID: server_id/workflow_id or workflow_id"),
     args: str = typer.Option("{}", "--args", "-a", help="JSON parameters"),
     only: str = typer.Option("", "--only", help="Comma-separated node IDs for partial execution (only run subgraph needed for these nodes)"),
+    priority: float = typer.Option(0, "--priority", "-p", help="Queue priority (lower runs first, negative to jump queue)"),
+    validate: bool = typer.Option(False, "--validate", help="Validate workflow without executing (checks node errors, then cancels)"),
 ):
     """Execute a skill (blocking — waits for completion)."""
     base_dir, server_id, workflow_id = _resolve_skill(ctx, skill_id)
@@ -52,12 +54,30 @@ def run_cmd(
     targets = [t.strip() for t in only.split(",") if t.strip()] if only else None
 
     try:
-        result = client.queue_prompt(workflow, client_id=client_id, targets=targets)
+        result = client.queue_prompt(workflow, client_id=client_id, targets=targets, priority=priority if priority != 0 else None)
     except Exception as exc:
         output_error(ctx, "SUBMIT_FAILED", f"Failed to submit workflow: {exc}")
         return
 
     prompt_id = result.get("prompt_id", "")
+    node_errors = result.get("node_errors", {})
+
+    if validate:
+        if prompt_id:
+            try:
+                client.interrupt(prompt_id)
+                client.queue_delete([prompt_id])
+            except Exception:
+                pass
+        if node_errors:
+            output_result(ctx, {"status": "invalid", "prompt_id": prompt_id, "node_errors": node_errors})
+        else:
+            output_result(ctx, {"status": "valid", "prompt_id": prompt_id, "node_count": len(workflow)})
+        return
+
+    if node_errors:
+        output_event(ctx, "warning", prompt_id=prompt_id, message="Workflow has node errors", node_errors=node_errors)
+
     fmt = get_output_format(ctx)
     output_event(ctx, "queued", prompt_id=prompt_id)
 
@@ -238,6 +258,7 @@ def submit_cmd(
     skill_id: str = typer.Argument(help="Skill ID: server_id/workflow_id or workflow_id"),
     args: str = typer.Option("{}", "--args", "-a", help="JSON parameters"),
     only: str = typer.Option("", "--only", help="Comma-separated node IDs for partial execution (only run subgraph needed for these nodes)"),
+    priority: float = typer.Option(0, "--priority", "-p", help="Queue priority (lower runs first, negative to jump queue)"),
 ):
     """Submit a skill for execution (non-blocking — returns immediately)."""
     base_dir, server_id, workflow_id = _resolve_skill(ctx, skill_id)
@@ -249,7 +270,7 @@ def submit_cmd(
     targets = [t.strip() for t in only.split(",") if t.strip()] if only else None
 
     try:
-        result = client.queue_prompt(workflow, targets=targets)
+        result = client.queue_prompt(workflow, targets=targets, priority=priority if priority != 0 else None)
     except Exception as exc:
         output_error(ctx, "SUBMIT_FAILED", f"Failed to submit workflow: {exc}")
         return

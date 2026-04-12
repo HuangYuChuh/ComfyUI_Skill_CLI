@@ -17,6 +17,8 @@ def upload_cmd(
     ctx: typer.Context,
     file_path: Optional[str] = typer.Argument(None, help="Path to file (image, mask, audio, etc.)"),
     from_output: str = typer.Option("", "--from-output", help="Prompt ID — reuse an output from a previous run as input"),
+    mask: bool = typer.Option(False, "--mask", help="Upload as mask (for inpainting workflows)"),
+    original: str = typer.Option("", "--original", help="Original image filename (for mask upload)"),
 ):
     """Upload a file to ComfyUI for use in workflows.
 
@@ -48,7 +50,7 @@ def upload_cmd(
     if from_output:
         _upload_from_output(ctx, client, server_id, from_output)
     else:
-        _upload_local_file(ctx, client, server_id, file_path)
+        _upload_local_file(ctx, client, server_id, file_path, mask, original)
 
 
 def _upload_local_file(
@@ -56,13 +58,18 @@ def _upload_local_file(
     client: ComfyUIClient,
     server_id: str,
     file_path: str,
+    mask: bool = False,
+    original: str = "",
 ) -> None:
     if not os.path.isfile(file_path):
         output_error(ctx, "FILE_NOT_FOUND", f'File not found: "{file_path}"')
         return
 
     try:
-        result = client.upload_file(file_path)
+        if mask:
+            result = client.upload_mask(file_path, original)
+        else:
+            result = client.upload_file(file_path)
         output_result(ctx, {
             "name": result.get("name", ""),
             "subfolder": result.get("subfolder", ""),
