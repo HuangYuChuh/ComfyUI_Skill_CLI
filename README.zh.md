@@ -107,11 +107,13 @@ comfyui-skill run txt2img -s my_server   # 通过 --server 指定
 |------|------|
 | `comfyui-skill list` | 列出所有可用工作流及参数 |
 | `comfyui-skill info <id>` | 查看工作流详情和参数 schema |
-| `comfyui-skill run <id> --args '{...}'` | 执行工作流（阻塞） |
+| `comfyui-skill run <id> --args '{...}'` | 执行工作流（阻塞，实时 WebSocket 流式输出） |
+| `comfyui-skill run <id> --validate` | 验证工作流但不执行 |
 | `comfyui-skill submit <id> --args '{...}'` | 提交工作流（非阻塞） |
 | `comfyui-skill status <prompt_id>` | 查询执行状态并显示已发现的结果 |
 | `comfyui-skill cancel <prompt_id>` | 取消运行中或排队中的任务 |
 | `comfyui-skill upload <file>` | 上传文件到 ComfyUI 供工作流使用 |
+| `comfyui-skill upload <file> --mask` | 上传 inpainting 蒙版图片 |
 | `comfyui-skill upload --from-output <prompt_id>` | 将上次运行的输出作为下一个工作流的输入 |
 
 ### 队列与资源管理
@@ -125,12 +127,17 @@ comfyui-skill run txt2img -s my_server   # 通过 --server 指定
 | `comfyui-skill free --models` | 仅卸载模型 |
 | `comfyui-skill free --memory` | 仅释放缓存 |
 
-### 模型发现
+### 节点与模型发现
 
 | 命令 | 说明 |
 |------|------|
+| `comfyui-skill nodes list` | 按分类列出所有可用的 ComfyUI 节点 |
+| `comfyui-skill nodes info <class>` | 查看节点输入/输出 schema |
+| `comfyui-skill nodes search <query>` | 按名称或分类搜索节点 |
 | `comfyui-skill models list` | 列出所有模型文件夹 |
 | `comfyui-skill models list <folder>` | 列出指定文件夹中的模型（如 `checkpoints`、`loras`） |
+| `comfyui-skill models embeddings` | 列出可用的文本嵌入 |
+| `comfyui-skill models metadata <folder> <file>` | 查看 safetensors 模型元数据 |
 
 ### 工作流管理
 
@@ -151,6 +158,8 @@ comfyui-skill run txt2img -s my_server   # 通过 --server 指定
 | `comfyui-skill server add --id <id> --url <url>` | 添加新服务器 |
 | `comfyui-skill server enable/disable <id>` | 启用/禁用服务器 |
 | `comfyui-skill server remove <id>` | 移除服务器 |
+| `comfyui-skill server stats` | 查看 VRAM、RAM、GPU 信息（`--all` 查看所有服务器） |
+| `comfyui-skill server features` | 查看服务器功能标志 |
 
 ### 依赖管理
 
@@ -169,6 +178,11 @@ comfyui-skill run txt2img -s my_server   # 通过 --server 指定
 | `comfyui-skill config import <path>` | 导入配置（支持 `--dry-run`） |
 | `comfyui-skill history list <id>` | 查看执行历史 |
 | `comfyui-skill history show <id> <run_id>` | 查看单次运行详情 |
+| `comfyui-skill jobs list` | 查看服务端任务历史（`--status` 可过滤） |
+| `comfyui-skill jobs show <prompt_id>` | 查看特定任务详情 |
+| `comfyui-skill logs show` | 查看 ComfyUI 服务器日志 |
+| `comfyui-skill templates list` | 列出自定义节点提供的工作流模板 |
+| `comfyui-skill templates subgraphs` | 列出可复用的子工作流组件 |
 
 ### 全局选项
 
@@ -272,10 +286,6 @@ comfyui-skill deps install local/my-workflow --all --json
 
 ## 相关资源
 
-<<<<<<< HEAD
 - [ComfyUI Skills OpenClaw](https://github.com/HuangYuChuh/ComfyUI_Skills_OpenClaw) — 主仓库（Skills 定义）
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI) — 本 CLI 调度的后端
 - [Typer](https://typer.tiangolo.com/) — 本项目使用的 CLI 框架
-=======
-基于 [Typer](https://typer.tiangolo.com/) 构建，与 [comfy-cli](https://github.com/Comfy-Org/comfy-cli) 使用相同框架。未来计划作为 `comfy skills` 子命令集成。
->>>>>>> 246e194 (docs: add zh-TW and ja readmes)

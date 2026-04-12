@@ -107,11 +107,13 @@ comfyui-skill run txt2img -s my_server   # --server で上書き
 |----------|------|
 | `comfyui-skill list` | 利用可能なワークフローとパラメータを一覧表示 |
 | `comfyui-skill info <id>` | ワークフロー詳細とパラメータ schema を表示 |
-| `comfyui-skill run <id> --args '{...}'` | ワークフローを実行（同期） |
+| `comfyui-skill run <id> --args '{...}'` | ワークフローを実行（同期、リアルタイムWebSocketストリーミング） |
+| `comfyui-skill run <id> --validate` | ワークフローを実行せずに検証 |
 | `comfyui-skill submit <id> --args '{...}'` | ワークフローを送信（非同期） |
 | `comfyui-skill status <prompt_id>` | 実行状態を確認し、見つかった結果を表示 |
 | `comfyui-skill cancel <prompt_id>` | 実行中または待機中のジョブをキャンセル |
 | `comfyui-skill upload <file>` | ワークフローで使うためのファイルを ComfyUI にアップロード |
+| `comfyui-skill upload <file> --mask` | インペインティング用マスク画像のアップロード |
 | `comfyui-skill upload --from-output <prompt_id>` | 前回実行の出力を次のワークフロー入力として再利用 |
 
 ### キューとリソース管理
@@ -125,12 +127,17 @@ comfyui-skill run txt2img -s my_server   # --server で上書き
 | `comfyui-skill free --models` | モデルのみアンロード |
 | `comfyui-skill free --memory` | キャッシュメモリのみ解放 |
 
-### モデル探索
+### ノード・モデル探索
 
 | コマンド | 説明 |
 |----------|------|
+| `comfyui-skill nodes list` | カテゴリ別に利用可能な全ComfyUIノードを一覧表示 |
+| `comfyui-skill nodes info <class>` | ノードの入出力スキーマを表示 |
+| `comfyui-skill nodes search <query>` | 名前やカテゴリでノードを検索 |
 | `comfyui-skill models list` | 利用可能なモデルフォルダを一覧表示 |
 | `comfyui-skill models list <folder>` | 指定フォルダ内のモデルを一覧表示（例: `checkpoints`, `loras`） |
+| `comfyui-skill models embeddings` | 利用可能なテキスト埋め込みを一覧表示 |
+| `comfyui-skill models metadata <folder> <file>` | safetensorsモデルのメタデータを表示 |
 
 ### ワークフロー管理
 
@@ -151,6 +158,8 @@ comfyui-skill run txt2img -s my_server   # --server で上書き
 | `comfyui-skill server add --id <id> --url <url>` | 新しいサーバーを追加 |
 | `comfyui-skill server enable/disable <id>` | サーバーの有効/無効を切り替え |
 | `comfyui-skill server remove <id>` | サーバーを削除 |
+| `comfyui-skill server stats` | VRAM、RAM、GPU情報を表示（`--all`で全サーバー） |
+| `comfyui-skill server features` | サーバー機能フラグを表示 |
 
 ### 依存関係管理
 
@@ -169,6 +178,11 @@ comfyui-skill run txt2img -s my_server   # --server で上書き
 | `comfyui-skill config import <path>` | 設定バンドルをインポート（`--dry-run` 対応） |
 | `comfyui-skill history list <id>` | 実行履歴を一覧表示 |
 | `comfyui-skill history show <id> <run_id>` | 特定の実行詳細を表示 |
+| `comfyui-skill jobs list` | サーバー側ジョブ履歴を表示（`--status`でフィルタ） |
+| `comfyui-skill jobs show <prompt_id>` | 特定ジョブの詳細を表示 |
+| `comfyui-skill logs show` | ComfyUIサーバーログを表示 |
+| `comfyui-skill templates list` | カスタムノードのワークフローテンプレートを一覧表示 |
+| `comfyui-skill templates subgraphs` | 再利用可能なサブグラフコンポーネントを一覧表示 |
 
 ### グローバルオプション
 

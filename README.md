@@ -110,11 +110,13 @@ comfyui-skill run txt2img -s my_server   # override with --server flag
 |---------|-------------|
 | `comfyui-skill list` | List all available workflows with parameters |
 | `comfyui-skill info <id>` | Show workflow details and parameter schema |
-| `comfyui-skill run <id> --args '{...}'` | Execute a workflow (blocking) |
+| `comfyui-skill run <id> --args '{...}'` | Execute a workflow (blocking, real-time WebSocket streaming) |
+| `comfyui-skill run <id> --validate` | Validate workflow without executing |
 | `comfyui-skill submit <id> --args '{...}'` | Submit a workflow (non-blocking) |
 | `comfyui-skill status <prompt_id>` | Check execution status and show discovered results |
 | `comfyui-skill cancel <prompt_id>` | Cancel a running or queued job |
 | `comfyui-skill upload <file>` | Upload a file to ComfyUI for use in workflows |
+| `comfyui-skill upload <file> --mask` | Upload a mask image for inpainting workflows |
 | `comfyui-skill upload --from-output <prompt_id>` | Chain a previous run's output as input for the next workflow |
 
 ### Queue & Resource Management
@@ -128,12 +130,17 @@ comfyui-skill run txt2img -s my_server   # override with --server flag
 | `comfyui-skill free --models` | Unload models only |
 | `comfyui-skill free --memory` | Free cached memory only |
 
-### Model Discovery
+### Node & Model Discovery
 
 | Command | Description |
 |---------|-------------|
+| `comfyui-skill nodes list` | List all available ComfyUI nodes by category |
+| `comfyui-skill nodes info <class>` | Show node input/output schema |
+| `comfyui-skill nodes search <query>` | Search nodes by name or category |
 | `comfyui-skill models list` | List all available model folders |
 | `comfyui-skill models list <folder>` | List models in a specific folder (e.g., `checkpoints`, `loras`) |
+| `comfyui-skill models embeddings` | List available text embeddings |
+| `comfyui-skill models metadata <folder> <file>` | Show safetensors model metadata |
 
 ### Workflow Management
 
@@ -151,6 +158,8 @@ comfyui-skill run txt2img -s my_server   # override with --server flag
 |---------|-------------|
 | `comfyui-skill server list` | List all configured servers |
 | `comfyui-skill server status` | Check if ComfyUI server is online |
+| `comfyui-skill server stats` | Show VRAM, RAM, GPU info (`--all` for multi-server) |
+| `comfyui-skill server features` | Show server capability flags |
 | `comfyui-skill server add --id <id> --url <url>` | Add a new server |
 | `comfyui-skill server enable/disable <id>` | Toggle server availability |
 | `comfyui-skill server remove <id>` | Remove a server |
@@ -172,6 +181,11 @@ comfyui-skill run txt2img -s my_server   # override with --server flag
 | `comfyui-skill config import <path>` | Import config bundle (supports `--dry-run`) |
 | `comfyui-skill history list <id>` | List execution history |
 | `comfyui-skill history show <id> <run_id>` | Show details of a specific run |
+| `comfyui-skill jobs list` | List server-side job history (`--status` to filter) |
+| `comfyui-skill jobs show <prompt_id>` | Show details of a specific job |
+| `comfyui-skill logs show` | Show recent ComfyUI server logs |
+| `comfyui-skill templates list` | List workflow templates from custom nodes |
+| `comfyui-skill templates subgraphs` | List reusable subgraph components |
 
 ### Global Options
 

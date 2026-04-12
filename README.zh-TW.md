@@ -107,11 +107,13 @@ comfyui-skill run txt2img -s my_server   # 透過 --server 覆寫
 |------|------|
 | `comfyui-skill list` | 列出所有可用工作流程與參數 |
 | `comfyui-skill info <id>` | 查看工作流程詳情與參數 schema |
-| `comfyui-skill run <id> --args '{...}'` | 執行工作流程（阻塞） |
+| `comfyui-skill run <id> --args '{...}'` | 執行工作流程（阻塞），即時 WebSocket 串流輸出 |
+| `comfyui-skill run <id> --validate` | 驗證工作流但不執行 |
 | `comfyui-skill submit <id> --args '{...}'` | 提交工作流程（非阻塞） |
 | `comfyui-skill status <prompt_id>` | 查詢執行狀態並顯示已找到的結果 |
 | `comfyui-skill cancel <prompt_id>` | 取消執行中或排隊中的任務 |
 | `comfyui-skill upload <file>` | 上傳檔案到 ComfyUI，供工作流程使用 |
+| `comfyui-skill upload <file> --mask` | 上傳 inpainting 遮罩圖片 |
 | `comfyui-skill upload --from-output <prompt_id>` | 將前一次執行的輸出串接成下一個工作流程的輸入 |
 
 ### 佇列與資源管理
@@ -125,12 +127,17 @@ comfyui-skill run txt2img -s my_server   # 透過 --server 覆寫
 | `comfyui-skill free --models` | 只卸載模型 |
 | `comfyui-skill free --memory` | 只釋放快取記憶體 |
 
-### 模型探索
+### 節點與模型探索
 
 | 命令 | 說明 |
 |------|------|
+| `comfyui-skill nodes list` | 依分類列出所有可用的 ComfyUI 節點 |
+| `comfyui-skill nodes info <class>` | 查看節點輸入/輸出 schema |
+| `comfyui-skill nodes search <query>` | 依名稱或分類搜尋節點 |
 | `comfyui-skill models list` | 列出所有可用模型資料夾 |
 | `comfyui-skill models list <folder>` | 列出指定資料夾中的模型（例如 `checkpoints`、`loras`） |
+| `comfyui-skill models embeddings` | 列出可用的文字嵌入 |
+| `comfyui-skill models metadata <folder> <file>` | 查看 safetensors 模型中繼資料 |
 
 ### 工作流程管理
 
@@ -151,6 +158,8 @@ comfyui-skill run txt2img -s my_server   # 透過 --server 覆寫
 | `comfyui-skill server add --id <id> --url <url>` | 新增伺服器 |
 | `comfyui-skill server enable/disable <id>` | 啟用或停用伺服器 |
 | `comfyui-skill server remove <id>` | 移除伺服器 |
+| `comfyui-skill server stats` | 查看 VRAM、RAM、GPU 資訊（`--all` 查看所有伺服器） |
+| `comfyui-skill server features` | 查看伺服器功能旗標 |
 
 ### 依賴管理
 
@@ -169,6 +178,11 @@ comfyui-skill run txt2img -s my_server   # 透過 --server 覆寫
 | `comfyui-skill config import <path>` | 匯入設定（支援 `--dry-run`） |
 | `comfyui-skill history list <id>` | 查看執行歷史 |
 | `comfyui-skill history show <id> <run_id>` | 查看單次執行詳情 |
+| `comfyui-skill jobs list` | 查看伺服器端任務歷史（`--status` 可篩選） |
+| `comfyui-skill jobs show <prompt_id>` | 查看特定任務詳情 |
+| `comfyui-skill logs show` | 查看 ComfyUI 伺服器日誌 |
+| `comfyui-skill templates list` | 列出自訂節點提供的工作流範本 |
+| `comfyui-skill templates subgraphs` | 列出可重複使用的子工作流元件 |
 
 ### 全域選項
 
