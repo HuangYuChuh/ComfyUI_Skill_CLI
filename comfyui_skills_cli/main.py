@@ -5,7 +5,7 @@ from __future__ import annotations
 import typer
 
 from . import __version__
-from .commands import cancel, config, deps, free, history, jobs, logs, models, nodes, queue, run, server, skill, templates, upload, workflow
+from .commands import cancel, config, deps, free, history, logs, models, nodes, queue, run, server, skill, templates, upload, workflow
 from .update_check import is_machine_output, maybe_notify_update
 
 app = typer.Typer(
@@ -49,7 +49,7 @@ def main(
 
 
 # Subcommand groups — each needs a callback to inherit parent context
-for sub_app in [config.app, deps.app, history.app, jobs.app, logs.app, models.app, nodes.app, queue.app, server.app, templates.app, workflow.app]:
+for sub_app in [config.app, deps.app, history.app, logs.app, models.app, nodes.app, queue.app, server.app, templates.app, workflow.app]:
     @sub_app.callback()
     def _pass_context(ctx: typer.Context):
         if ctx.parent and ctx.parent.obj:
@@ -61,7 +61,6 @@ app.add_typer(models.app, name="models", help="Discover available models")
 app.add_typer(nodes.app, name="nodes", help="Discover available ComfyUI nodes")
 app.add_typer(deps.app, name="deps", help="Manage dependencies")
 app.add_typer(history.app, name="history", help="Execution history")
-app.add_typer(jobs.app, name="jobs", help="Server-side job history")
 app.add_typer(logs.app, name="logs", help="Server log access")
 app.add_typer(queue.app, name="queue", help="View and manage execution queue")
 app.add_typer(server.app, name="server", help="Manage servers")
