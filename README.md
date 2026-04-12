@@ -276,10 +276,8 @@ Contributions are welcome! Please read the [Contributing Guide](https://github.c
 
 ## Resources
 
-<<<<<<< HEAD
 - [ComfyUI Skills OpenClaw](https://github.com/HuangYuChuh/ComfyUI_Skills_OpenClaw) — Main skills repository
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI) — The backend this CLI orchestrates
 - [Typer](https://typer.tiangolo.com/) — CLI framework used by this project
-=======
+
 Built with [Typer](https://typer.tiangolo.com/), the same framework as [comfy-cli](https://github.com/Comfy-Org/comfy-cli). Designed to be integrated as a `comfy skills` subcommand in the future.
->>>>>>> 246e194 (docs: add zh-TW and ja readmes)
