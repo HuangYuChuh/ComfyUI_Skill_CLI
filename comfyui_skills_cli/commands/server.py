@@ -232,6 +232,7 @@ def server_features(
         output_result(ctx, {"server_id": sid, "features": features})
     except Exception as exc:
         output_error(ctx, "SERVER_ERROR", f"Failed to fetch features: {exc}")
+        return
 
 
 def _toggle_server(ctx: typer.Context, server_id: str, enabled: bool) -> None:

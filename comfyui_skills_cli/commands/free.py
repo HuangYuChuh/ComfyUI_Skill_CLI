@@ -44,3 +44,4 @@ def free_cmd(
         output_result(ctx, {"status": "ok", "actions": actions, "server_id": server_id})
     except Exception as exc:
         output_error(ctx, "FREE_FAILED", f"Failed to free memory: {exc}")
+        return
