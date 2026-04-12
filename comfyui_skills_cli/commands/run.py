@@ -42,7 +42,7 @@ def run_cmd(
     workflow = _inject_params(workflow_data, parameters, input_args)
 
     # Upload image files before submitting
-    _upload_media(client, workflow, parameters, input_args)
+    _upload_media(ctx, client, workflow, parameters, input_args)
 
     # Submit
     try:
@@ -135,7 +135,7 @@ def submit_cmd(
     workflow = _inject_params(workflow_data, parameters, input_args)
 
     # Upload image files before submitting
-    _upload_media(client, workflow, parameters, input_args)
+    _upload_media(ctx, client, workflow, parameters, input_args)
 
     try:
         result = client.queue_prompt(workflow)
@@ -268,6 +268,7 @@ def _inject_params(
 
 
 def _upload_media(
+    ctx: typer.Context,
     client: "ComfyUIClient",
     workflow: dict[str, Any],
     parameters: dict[str, Any],
@@ -282,8 +283,8 @@ def _upload_media(
             continue
         if not isinstance(value, str) or not value:
             continue
-        # Already a plain filename (no path separator) — skip
-        if "/" not in value and "\\" not in value:
+        # Not a local file — treat as existing filename in input folder
+        if not os.path.isfile(value):
             continue
         # Upload the file
         try:
@@ -296,7 +297,8 @@ def _upload_media(
                     workflow[node_id]["inputs"][field] = uploaded_name
                     logger.info("Uploaded %s → %s (node %s.%s)", value, uploaded_name, node_id, field)
         except Exception as exc:
-            logger.warning("Failed to upload %s: %s", value, exc)
+            output_error(ctx, "UPLOAD_FAILED", f"Failed to upload {value}: {exc}")
+            raise typer.Exit(code=1)
 
 
 _MEDIA_KEYS: dict[str, str] = {
