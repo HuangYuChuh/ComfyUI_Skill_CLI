@@ -136,8 +136,6 @@ comfyui-skill run txt2img -s my_server   # 通过 --server 指定
 | `comfyui-skill nodes search <query>` | 按名称或分类搜索节点 |
 | `comfyui-skill models list` | 列出所有模型文件夹 |
 | `comfyui-skill models list <folder>` | 列出指定文件夹中的模型（如 `checkpoints`、`loras`） |
-| `comfyui-skill models embeddings` | 列出可用的文本嵌入 |
-| `comfyui-skill models metadata <folder> <file>` | 查看 safetensors 模型元数据 |
 
 ### 工作流管理
 
@@ -159,7 +157,6 @@ comfyui-skill run txt2img -s my_server   # 通过 --server 指定
 | `comfyui-skill server enable/disable <id>` | 启用/禁用服务器 |
 | `comfyui-skill server remove <id>` | 移除服务器 |
 | `comfyui-skill server stats` | 查看 VRAM、RAM、GPU 信息（`--all` 查看所有服务器） |
-| `comfyui-skill server features` | 查看服务器功能标志 |
 
 ### 依赖管理
 

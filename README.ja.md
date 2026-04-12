@@ -136,8 +136,6 @@ comfyui-skill run txt2img -s my_server   # --server で上書き
 | `comfyui-skill nodes search <query>` | 名前やカテゴリでノードを検索 |
 | `comfyui-skill models list` | 利用可能なモデルフォルダを一覧表示 |
 | `comfyui-skill models list <folder>` | 指定フォルダ内のモデルを一覧表示（例: `checkpoints`, `loras`） |
-| `comfyui-skill models embeddings` | 利用可能なテキスト埋め込みを一覧表示 |
-| `comfyui-skill models metadata <folder> <file>` | safetensorsモデルのメタデータを表示 |
 
 ### ワークフロー管理
 
@@ -159,7 +157,6 @@ comfyui-skill run txt2img -s my_server   # --server で上書き
 | `comfyui-skill server enable/disable <id>` | サーバーの有効/無効を切り替え |
 | `comfyui-skill server remove <id>` | サーバーを削除 |
 | `comfyui-skill server stats` | VRAM、RAM、GPU情報を表示（`--all`で全サーバー） |
-| `comfyui-skill server features` | サーバー機能フラグを表示 |
 
 ### 依存関係管理
 

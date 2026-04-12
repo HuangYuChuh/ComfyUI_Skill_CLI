@@ -169,17 +169,6 @@ class ComfyUIClient:
         resp.raise_for_status()
         return resp.json()
 
-    def get_embeddings(self) -> list[str]:
-        resp = self._get("/embeddings")
-        resp.raise_for_status()
-        return resp.json()
-
-    def get_model_metadata(self, folder: str, filename: str) -> dict[str, Any]:
-        resp = self._get(f"/view_metadata/{folder}", params={"filename": filename})
-        if resp.status_code == 404:
-            return {}
-        resp.raise_for_status()
-        return resp.json()
 
     # -- Manager API (ComfyUI-Manager plugin) --
 
@@ -307,17 +296,10 @@ class ComfyUIClient:
         resp.raise_for_status()
         return resp.json()
 
-    # -- Node replacements, features, logs, templates --
+    # -- Node replacements, logs, templates --
 
     def get_node_replacements(self) -> dict[str, str]:
         resp = self._get("/node_replacements")
-        if resp.status_code == 404:
-            return {}
-        resp.raise_for_status()
-        return resp.json()
-
-    def get_features(self) -> dict[str, Any]:
-        resp = self._get("/features")
         if resp.status_code == 404:
             return {}
         resp.raise_for_status()
