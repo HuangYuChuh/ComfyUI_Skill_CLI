@@ -139,8 +139,6 @@ comfyui-skill run txt2img -s my_server   # override with --server flag
 | `comfyui-skill nodes search <query>` | Search nodes by name or category |
 | `comfyui-skill models list` | List all available model folders |
 | `comfyui-skill models list <folder>` | List models in a specific folder (e.g., `checkpoints`, `loras`) |
-| `comfyui-skill models embeddings` | List available text embeddings |
-| `comfyui-skill models metadata <folder> <file>` | Show safetensors model metadata |
 
 ### Workflow Management
 
@@ -159,7 +157,6 @@ comfyui-skill run txt2img -s my_server   # override with --server flag
 | `comfyui-skill server list` | List all configured servers |
 | `comfyui-skill server status` | Check if ComfyUI server is online |
 | `comfyui-skill server stats` | Show VRAM, RAM, GPU info (`--all` for multi-server) |
-| `comfyui-skill server features` | Show server capability flags |
 | `comfyui-skill server add --id <id> --url <url>` | Add a new server |
 | `comfyui-skill server enable/disable <id>` | Toggle server availability |
 | `comfyui-skill server remove <id>` | Remove a server |

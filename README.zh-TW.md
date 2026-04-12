@@ -136,8 +136,6 @@ comfyui-skill run txt2img -s my_server   # 透過 --server 覆寫
 | `comfyui-skill nodes search <query>` | 依名稱或分類搜尋節點 |
 | `comfyui-skill models list` | 列出所有可用模型資料夾 |
 | `comfyui-skill models list <folder>` | 列出指定資料夾中的模型（例如 `checkpoints`、`loras`） |
-| `comfyui-skill models embeddings` | 列出可用的文字嵌入 |
-| `comfyui-skill models metadata <folder> <file>` | 查看 safetensors 模型中繼資料 |
 
 ### 工作流程管理
 
@@ -159,7 +157,6 @@ comfyui-skill run txt2img -s my_server   # 透過 --server 覆寫
 | `comfyui-skill server enable/disable <id>` | 啟用或停用伺服器 |
 | `comfyui-skill server remove <id>` | 移除伺服器 |
 | `comfyui-skill server stats` | 查看 VRAM、RAM、GPU 資訊（`--all` 查看所有伺服器） |
-| `comfyui-skill server features` | 查看伺服器功能旗標 |
 
 ### 依賴管理
 

@@ -6,12 +6,9 @@
 
 - `nodes list / info / search` — discover available ComfyUI nodes, inspect input/output schemas, search by name or category
 - `server stats` — show VRAM, RAM, GPU, ComfyUI/Python/PyTorch versions (`--all` for multi-server comparison)
-- `server features` — query server capability flags
 - `jobs list / show` — server-side job history with status filtering and pagination
 - `logs show` — access ComfyUI server logs for error diagnosis
 - `templates list / subgraphs` — discover workflow templates and reusable subgraph components
-- `models embeddings` — list installed text embeddings
-- `models metadata` — inspect safetensors model metadata
 
 ### New Flags
 
@@ -29,4 +26,3 @@
 ### Fixes
 
 - Handle `None` values in `/object_info` category and display_name fields
-- Fix double error output in `models metadata` when file not found
