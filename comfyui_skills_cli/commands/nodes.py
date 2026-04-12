@@ -8,26 +8,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from ..client import ComfyUIClient
-from ..config import get_base_dir, get_default_server_id, get_server, load_config
 from ..output import get_output_format, OutputFormat, output_error, output_result
+from ..utils import build_client
 
 app = typer.Typer(no_args_is_help=True)
-
-
-def _build_client(ctx: typer.Context) -> ComfyUIClient:
-    base_dir = get_base_dir(ctx.obj.get("base_dir", ""))
-    config = load_config(base_dir)
-    server_id = ctx.obj.get("server") or get_default_server_id(config)
-    server_config = get_server(config, server_id)
-
-    if not server_config:
-        output_error(ctx, "SERVER_NOT_FOUND", f'Server "{server_id}" not found.')
-
-    return ComfyUIClient(
-        server_url=server_config.get("url", "http://127.0.0.1:8188"),
-        auth=server_config.get("auth", ""),
-    )
 
 
 def _flatten_nodes(all_info: dict, category_filter: str = "") -> list[dict]:
@@ -64,11 +48,12 @@ def nodes_list(
     category: Optional[str] = typer.Option(None, "--category", "-c", help="Filter by category"),
 ):
     """List all available node classes, grouped by category."""
-    client = _build_client(ctx)
+    client, _ = build_client(ctx)
     try:
         all_info = client.get_object_info()
     except Exception as exc:
         output_error(ctx, "NODES_FAILED", f"Failed to fetch nodes: {exc}")
+        return
 
     rows = _flatten_nodes(all_info, category or "")
 
@@ -85,11 +70,12 @@ def nodes_info(
     node_class: str = typer.Argument(help="Node class name (e.g. KSampler)"),
 ):
     """Show full details of a single node class."""
-    client = _build_client(ctx)
+    client, _ = build_client(ctx)
     try:
         info = client.get_object_info_node(node_class)
     except Exception as exc:
         output_error(ctx, "NODES_FAILED", f"Failed to fetch node info: {exc}")
+        return
 
     if not info:
         output_error(ctx, "NODE_NOT_FOUND", f'Node class "{node_class}" not found.')
@@ -154,11 +140,12 @@ def nodes_search(
     query: str = typer.Argument(help="Search query (substring match)"),
 ):
     """Fuzzy search across node names, display names, and categories."""
-    client = _build_client(ctx)
+    client, _ = build_client(ctx)
     try:
         all_info = client.get_object_info()
     except Exception as exc:
         output_error(ctx, "NODES_FAILED", f"Failed to fetch nodes: {exc}")
+        return
 
     q = query.lower()
     rows = []
