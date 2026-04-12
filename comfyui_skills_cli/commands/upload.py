@@ -78,6 +78,7 @@ def _upload_local_file(
         })
     except Exception as exc:
         output_error(ctx, "UPLOAD_FAILED", f"Upload failed: {exc}")
+        return
 
 
 def _upload_from_output(
@@ -143,3 +144,4 @@ def _upload_from_output(
 
     except Exception as exc:
         output_error(ctx, "CHAIN_FAILED", f"Failed to chain output: {exc}")
+        return

@@ -49,3 +49,4 @@ def cancel_cmd(
 
     except Exception as exc:
         output_error(ctx, "CANCEL_FAILED", f"Failed to cancel job: {exc}")
+        return
