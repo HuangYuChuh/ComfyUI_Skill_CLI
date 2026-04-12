@@ -57,12 +57,14 @@ class ComfyUIClient:
 
     # -- Prompt execution --
 
-    def queue_prompt(self, workflow: dict[str, Any], client_id: str | None = None, targets: list[str] | None = None) -> dict[str, Any]:
+    def queue_prompt(self, workflow: dict[str, Any], client_id: str | None = None, targets: list[str] | None = None, priority: float | None = None) -> dict[str, Any]:
         cid = client_id or str(uuid.uuid4())
         payload: dict[str, Any] = {
             "prompt": workflow,
             "client_id": cid,
         }
+        if priority is not None:
+            payload["number"] = priority
         if targets:
             payload["partial_execution_targets"] = [[t] for t in targets]
         if self.comfy_api_key:
@@ -167,6 +169,18 @@ class ComfyUIClient:
         resp.raise_for_status()
         return resp.json()
 
+    def get_embeddings(self) -> list[str]:
+        resp = self._get("/embeddings")
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_model_metadata(self, folder: str, filename: str) -> dict[str, Any]:
+        resp = self._get(f"/view_metadata/{folder}", params={"filename": filename})
+        if resp.status_code == 404:
+            return {}
+        resp.raise_for_status()
+        return resp.json()
+
     # -- Manager API (ComfyUI-Manager plugin) --
 
     def manager_start_queue(self) -> bool:
@@ -257,6 +271,76 @@ class ComfyUIClient:
 
     def upload_image(self, filepath: str) -> dict[str, Any]:
         return self.upload_file(filepath)
+
+    def upload_mask(self, filepath: str, original_ref: str = "") -> dict[str, Any]:
+        import mimetypes
+        import os
+        filename = os.path.basename(filepath)
+        content_type = mimetypes.guess_type(filepath)[0] or "application/octet-stream"
+        with open(filepath, "rb") as f:
+            content = f.read()
+
+        boundary = f"----ComfyUIBoundary{id(content)}"
+        parts = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="image"; filename="{filename}"\r\n'
+            f"Content-Type: {content_type}\r\n\r\n"
+        ).encode("utf-8") + content + b"\r\n"
+
+        if original_ref:
+            parts += (
+                f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="original_ref"\r\n\r\n'
+                f"{original_ref}\r\n"
+            ).encode("utf-8")
+
+        parts += f"--{boundary}--\r\n".encode("utf-8")
+
+        headers = self._headers()
+        headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+        resp = requests.post(
+            f"{self.server_url}/upload/mask",
+            data=parts,
+            headers=headers,
+            timeout=self.timeout,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    # -- Node replacements, features, logs, templates --
+
+    def get_node_replacements(self) -> dict[str, str]:
+        resp = self._get("/node_replacements")
+        if resp.status_code == 404:
+            return {}
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_features(self) -> dict[str, Any]:
+        resp = self._get("/features")
+        if resp.status_code == 404:
+            return {}
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_logs(self) -> dict[str, Any]:
+        resp = self._get("/internal/logs/raw")
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_subgraphs(self) -> dict[str, Any]:
+        resp = self._get("/global_subgraphs")
+        if resp.status_code == 404:
+            return {}
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_workflow_templates(self) -> dict[str, Any]:
+        resp = self._get("/workflow_templates")
+        if resp.status_code == 404:
+            return {}
+        resp.raise_for_status()
+        return resp.json()
 
     # -- ComfyUI Userdata API --
 

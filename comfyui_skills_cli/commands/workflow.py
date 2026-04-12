@@ -492,6 +492,25 @@ def _import_from_file(
         "path": str(workflow_dir),
     }
 
+    # Check for deprecated nodes
+    try:
+        repl_client = ComfyUIClient(
+            server_url=server_config.get("url", "http://127.0.0.1:8188"),
+            auth=server_config.get("auth", ""),
+        )
+        replacements = repl_client.get_node_replacements()
+        if replacements:
+            deprecated = []
+            for node_id, node in api_data.items():
+                if isinstance(node, dict):
+                    ct = node.get("class_type", "")
+                    if ct in replacements:
+                        deprecated.append({"node_id": node_id, "old": ct, "new": replacements[ct]})
+            if deprecated:
+                result["deprecated_nodes"] = deprecated
+    except Exception:
+        pass
+
     # Optional deps check
     if check_deps:
         from .deps import _check_missing_models
@@ -595,12 +614,28 @@ def _import_from_server(
         with open(workflow_dir / "schema.json", "w", encoding="utf-8") as f:
             json.dump(schema, f, ensure_ascii=False, indent=2)
 
-        results.append({
+        entry: dict[str, Any] = {
             "path": wf_path,
             "workflow_id": workflow_id,
             "status": "imported",
             "parameters_count": len(parameters),
-        })
+        }
+
+        try:
+            replacements = client.get_node_replacements()
+            if replacements:
+                deprecated = []
+                for node_id, node in api_data.items():
+                    if isinstance(node, dict):
+                        ct = node.get("class_type", "")
+                        if ct in replacements:
+                            deprecated.append({"node_id": node_id, "old": ct, "new": replacements[ct]})
+                if deprecated:
+                    entry["deprecated_nodes"] = deprecated
+        except Exception:
+            pass
+
+        results.append(entry)
         output_event(ctx, "imported", workflow_id=workflow_id)
 
     output_result(ctx, {
