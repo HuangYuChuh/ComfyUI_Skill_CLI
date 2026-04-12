@@ -13,6 +13,7 @@ import typer
 from ..client import ComfyUIClient
 from ..config import get_base_dir, get_default_server_id, get_server, load_config
 from ..output import output_error, output_event, output_result
+from ..storage import _safe_path
 
 app = typer.Typer()
 
@@ -469,7 +470,7 @@ def _import_from_file(
         return
 
     # Write files
-    workflow_dir = base_dir / "data" / server_id / workflow_id
+    workflow_dir = _safe_path(base_dir, server_id, workflow_id)
     workflow_dir.mkdir(parents=True, exist_ok=True)
 
     with open(workflow_dir / "workflow.json", "w", encoding="utf-8") as f:
@@ -604,7 +605,7 @@ def _import_from_server(
         workflow_id = _suggest_workflow_id(api_data, filename)
         parameters = _extract_schema(api_data, media_type)
 
-        workflow_dir = base_dir / "data" / server_id / workflow_id
+        workflow_dir = _safe_path(base_dir, server_id, workflow_id)
         workflow_dir.mkdir(parents=True, exist_ok=True)
 
         with open(workflow_dir / "workflow.json", "w", encoding="utf-8") as f:
@@ -674,7 +675,11 @@ def workflow_delete(
     base_dir = get_base_dir(ctx.obj.get("base_dir", ""))
     server_id, workflow_id = _parse_skill_id(ctx, skill_id)
 
-    workflow_dir = base_dir / "data" / server_id / workflow_id
+    try:
+        workflow_dir = _safe_path(base_dir, server_id, workflow_id)
+    except ValueError:
+        output_error(ctx, "INVALID_PATH", f'Invalid skill ID: "{skill_id}"')
+        return
     if not workflow_dir.is_dir():
         output_error(ctx, "SKILL_NOT_FOUND", f'Workflow "{skill_id}" not found.')
         return
@@ -692,7 +697,12 @@ def _toggle_workflow(ctx: typer.Context, skill_id: str, enabled: bool) -> None:
     base_dir = get_base_dir(ctx.obj.get("base_dir", ""))
     server_id, workflow_id = _parse_skill_id(ctx, skill_id)
 
-    schema_path = base_dir / "data" / server_id / workflow_id / "schema.json"
+    try:
+        workflow_dir = _safe_path(base_dir, server_id, workflow_id)
+    except ValueError:
+        output_error(ctx, "INVALID_PATH", f'Invalid skill ID: "{skill_id}"')
+        return
+    schema_path = workflow_dir / "schema.json"
     if not schema_path.exists():
         output_error(ctx, "SKILL_NOT_FOUND", f'Workflow "{skill_id}" not found.')
         return

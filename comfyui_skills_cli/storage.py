@@ -7,8 +7,20 @@ from pathlib import Path
 from typing import Any
 
 
+def _safe_path(base_dir: Path, server_id: str, workflow_id: str) -> Path:
+    """Construct and validate a workflow directory path. Raises ValueError on traversal."""
+    target = (base_dir / "data" / server_id / workflow_id).resolve()
+    safe_root = (base_dir / "data").resolve()
+    if not str(target).startswith(str(safe_root) + "/") and target != safe_root:
+        raise ValueError(f"Invalid path: {server_id}/{workflow_id}")
+    return target
+
+
 def list_workflows(base_dir: Path, server_id: str) -> list[dict[str, Any]]:
-    data_dir = base_dir / "data" / server_id
+    data_dir = (base_dir / "data" / server_id).resolve()
+    safe_root = (base_dir / "data").resolve()
+    if not str(data_dir).startswith(str(safe_root) + "/") and data_dir != safe_root:
+        return []
     if not data_dir.exists():
         return []
 
@@ -31,7 +43,10 @@ def list_workflows(base_dir: Path, server_id: str) -> list[dict[str, Any]]:
 
 
 def get_workflow_detail(base_dir: Path, server_id: str, workflow_id: str) -> dict[str, Any] | None:
-    workflow_dir = base_dir / "data" / server_id / workflow_id
+    try:
+        workflow_dir = _safe_path(base_dir, server_id, workflow_id)
+    except ValueError:
+        return None
     if not workflow_dir.is_dir():
         return None
 
@@ -53,15 +68,20 @@ def get_workflow_detail(base_dir: Path, server_id: str, workflow_id: str) -> dic
 
 
 def get_workflow_data(base_dir: Path, server_id: str, workflow_id: str) -> dict[str, Any] | None:
-    path = base_dir / "data" / server_id / workflow_id / "workflow.json"
+    try:
+        path = _safe_path(base_dir, server_id, workflow_id) / "workflow.json"
+    except ValueError:
+        return None
     if not path.exists():
         return None
     return _load_json(path)
 
 
 def get_schema(base_dir: Path, server_id: str, workflow_id: str) -> dict[str, Any] | None:
-    path = base_dir / "data" / server_id / workflow_id / "schema.json"
-    if not path.exists():
+    try:
+        path = _safe_path(base_dir, server_id, workflow_id) / "schema.json"
+    except ValueError:
+        return None
         return None
     return _load_json(path)
 
