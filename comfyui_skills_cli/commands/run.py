@@ -26,6 +26,14 @@ _POLL_MAX = 10.0
 _POLL_FACTOR = 1.5
 
 
+def _ws_available() -> bool:
+    try:
+        import websocket  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def run_cmd(
     ctx: typer.Context,
     skill_id: str = typer.Argument(help="Skill ID: server_id/workflow_id or workflow_id"),
@@ -37,30 +45,138 @@ def run_cmd(
 
     input_args = _parse_args(ctx, args)
     parameters = _get_parameters(schema_data)
-
-    # Inject parameters into workflow
     workflow = _inject_params(workflow_data, parameters, input_args)
 
-    # Submit
+    client_id = str(uuid.uuid4())
+
     try:
-        result = client.queue_prompt(workflow)
+        result = client.queue_prompt(workflow, client_id=client_id)
     except Exception as exc:
         output_error(ctx, "SUBMIT_FAILED", f"Failed to submit workflow: {exc}")
         return
 
     prompt_id = result.get("prompt_id", "")
     fmt = get_output_format(ctx)
-
-    # stream-json: emit events as they happen
     output_event(ctx, "queued", prompt_id=prompt_id)
 
-    # Rich progress for text mode
     if fmt == OutputFormat.TEXT:
         from rich.console import Console
         console = Console(stderr=True)
         console.print(f"[dim]Queued: {prompt_id}[/dim]")
 
-    # Poll until complete
+    if _ws_available():
+        try:
+            _run_with_ws(ctx, client, workflow, prompt_id, client_id, base_dir, server_config, fmt)
+            return
+        except Exception:
+            logger.debug("WebSocket failed, falling back to polling", exc_info=True)
+
+    _run_with_poll(ctx, client, prompt_id, base_dir, server_config, fmt)
+
+
+def _run_with_ws(
+    ctx: typer.Context,
+    client: ComfyUIClient,
+    workflow: dict[str, Any],
+    prompt_id: str,
+    client_id: str,
+    base_dir: Any,
+    server_config: dict[str, Any],
+    fmt: OutputFormat,
+) -> None:
+    if fmt == OutputFormat.TEXT:
+        from rich.console import Console
+        console = Console(stderr=True)
+
+    node_classes: dict[str, str] = {}
+    for node_id, node_data in workflow.items():
+        if isinstance(node_data, dict) and "class_type" in node_data:
+            node_classes[str(node_id)] = node_data["class_type"]
+
+    for event in client.ws_events(client_id, prompt_id):
+        etype = event["type"]
+        data = event["data"]
+
+        if etype == "execution_start":
+            output_event(ctx, "started", prompt_id=prompt_id)
+            if fmt == OutputFormat.TEXT:
+                console.print("[yellow]Running...[/yellow]")
+
+        elif etype == "execution_cached":
+            nodes = data.get("nodes", [])
+            output_event(ctx, "cached", prompt_id=prompt_id, nodes=nodes)
+
+        elif etype == "executing":
+            node = data.get("node")
+            if node is None:
+                break
+            display = node_classes.get(node, node)
+            output_event(ctx, "node_executing", prompt_id=prompt_id, node=node, node_display=display)
+            if fmt == OutputFormat.TEXT:
+                console.print(f"  [cyan]{display}[/cyan] ({node})")
+
+        elif etype == "executed":
+            node = data.get("node", "")
+            display = node_classes.get(node, node)
+            output_event(ctx, "node_completed", prompt_id=prompt_id, node=node, node_display=display, outputs=data.get("output", {}))
+
+        elif etype == "progress":
+            node = data.get("node", "")
+            value = data.get("value", 0)
+            max_val = data.get("max", 0)
+            display = node_classes.get(node, node)
+            output_event(ctx, "progress", prompt_id=prompt_id, node=node, node_display=display, value=value, max=max_val)
+            if fmt == OutputFormat.TEXT and max_val > 0:
+                pct = int(value / max_val * 100)
+                console.print(f"    [dim]{display} {value}/{max_val} ({pct}%)[/dim]", highlight=False)
+
+        elif etype == "execution_error":
+            error_msg = data.get("exception_message", "Execution error")
+            hint = match_error_hint(error_msg)
+            output_event(ctx, "error", prompt_id=prompt_id, message=error_msg)
+            output_error(ctx, "EXECUTION_FAILED", error_msg, hint=hint)
+            return
+
+        elif etype == "execution_interrupted":
+            output_error(ctx, "EXECUTION_INTERRUPTED", "Execution was interrupted")
+            return
+
+    history = client.get_history(prompt_id)
+    if history:
+        status_info = history.get("status", {})
+        if status_info.get("status_str") == "error":
+            error_msg = _format_errors(history)
+            hint = match_error_hint(error_msg)
+            output_event(ctx, "error", prompt_id=prompt_id, message=error_msg)
+            output_error(ctx, "EXECUTION_FAILED", error_msg, hint=hint)
+            return
+        outputs = history.get("outputs", {})
+        collected = _collect_outputs(outputs)
+        collected = _download_outputs(client, collected, base_dir, server_config)
+    else:
+        collected = []
+
+    output_event(ctx, "completed", prompt_id=prompt_id, outputs=collected)
+    if fmt != OutputFormat.STREAM_JSON:
+        output_result(ctx, {
+            "status": "success",
+            "prompt_id": prompt_id,
+            "outputs": collected,
+        })
+
+
+def _run_with_poll(
+    ctx: typer.Context,
+    client: ComfyUIClient,
+    prompt_id: str,
+    base_dir: Any,
+    server_config: dict[str, Any],
+    fmt: OutputFormat,
+) -> None:
+    if fmt == OutputFormat.TEXT:
+        from rich.console import Console
+        console = Console(stderr=True)
+
     poll_interval = _POLL_INITIAL
     prev_status = ""
     while True:
@@ -73,8 +189,6 @@ def run_cmd(
                 collected = _collect_outputs(outputs)
                 collected = _download_outputs(client, collected, base_dir, server_config)
                 output_event(ctx, "completed", prompt_id=prompt_id, outputs=collected)
-
-                # Final result — json and stream-json both get this
                 if fmt == OutputFormat.STREAM_JSON:
                     return
                 output_result(ctx, {
@@ -91,7 +205,6 @@ def run_cmd(
                 output_error(ctx, "EXECUTION_FAILED", error_msg, hint=hint)
                 return
 
-        # Check queue position
         queue = client.get_queue()
         current_status = ""
         for item in queue.get("queue_running", []):

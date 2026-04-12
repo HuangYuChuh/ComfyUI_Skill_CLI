@@ -29,7 +29,11 @@ dependencies = [
     "typer>=0.9",
     "rich>=13.0",
     "requests>=2.28",
+    "websocket-client>=1.0",
 ]
+
+[project.optional-dependencies]
+streaming = ["websocket-client>=1.0"]
 
 [project.urls]
 Homepage = "https://github.com/HuangYuChuh/ComfyUI_Skill_CLI"
