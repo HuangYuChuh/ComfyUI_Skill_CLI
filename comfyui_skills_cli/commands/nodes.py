@@ -33,14 +33,15 @@ def _build_client(ctx: typer.Context) -> ComfyUIClient:
 def _flatten_nodes(all_info: dict, category_filter: str = "") -> list[dict]:
     rows = []
     for class_type, info in all_info.items():
-        cat = info.get("category", "")
+        cat = info.get("category") or ""
+        display_name = info.get("display_name") or class_type
         if category_filter and category_filter.lower() != cat.lower():
             continue
         rows.append({
             "class_type": class_type,
-            "display_name": info.get("display_name", class_type),
+            "display_name": display_name,
             "category": cat,
-            "description": info.get("description", ""),
+            "description": info.get("description") or "",
         })
     rows.sort(key=lambda r: (r["category"].lower(), r["display_name"].lower()))
     return rows
@@ -162,14 +163,14 @@ def nodes_search(
     q = query.lower()
     rows = []
     for class_type, info in all_info.items():
-        display_name = info.get("display_name", class_type)
-        cat = info.get("category", "")
+        display_name = info.get("display_name") or class_type
+        cat = info.get("category") or ""
         if q in class_type.lower() or q in display_name.lower() or q in cat.lower():
             rows.append({
                 "class_type": class_type,
                 "display_name": display_name,
                 "category": cat,
-                "description": info.get("description", ""),
+                "description": info.get("description") or "",
             })
     rows.sort(key=lambda r: (r["category"].lower(), r["display_name"].lower()))
 
