@@ -43,7 +43,10 @@ def list_workflows(base_dir: Path, server_id: str) -> list[dict[str, Any]]:
 
 
 def get_workflow_detail(base_dir: Path, server_id: str, workflow_id: str) -> dict[str, Any] | None:
-    workflow_dir = _safe_path(base_dir, server_id, workflow_id)
+    try:
+        workflow_dir = _safe_path(base_dir, server_id, workflow_id)
+    except ValueError:
+        return None
     if not workflow_dir.is_dir():
         return None
 
@@ -65,15 +68,20 @@ def get_workflow_detail(base_dir: Path, server_id: str, workflow_id: str) -> dic
 
 
 def get_workflow_data(base_dir: Path, server_id: str, workflow_id: str) -> dict[str, Any] | None:
-    path = _safe_path(base_dir, server_id, workflow_id) / "workflow.json"
+    try:
+        path = _safe_path(base_dir, server_id, workflow_id) / "workflow.json"
+    except ValueError:
+        return None
     if not path.exists():
         return None
     return _load_json(path)
 
 
 def get_schema(base_dir: Path, server_id: str, workflow_id: str) -> dict[str, Any] | None:
-    path = _safe_path(base_dir, server_id, workflow_id) / "schema.json"
-    if not path.exists():
+    try:
+        path = _safe_path(base_dir, server_id, workflow_id) / "schema.json"
+    except ValueError:
+        return None
         return None
     return _load_json(path)
 
