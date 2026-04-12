@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +52,10 @@ def get_default_server_id(config: dict[str, Any]) -> str:
 
 def save_config(base_dir: Path, config: dict[str, Any]) -> None:
     config_path = base_dir / "config.json"
-    with open(config_path, "w", encoding="utf-8") as f:
+    tmp_path = config_path.with_suffix(".tmp")
+    with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
         f.write("\n")
+        f.flush()
+        os.fsync(f.fileno())
+    tmp_path.replace(config_path)
