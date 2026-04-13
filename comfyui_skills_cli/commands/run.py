@@ -399,12 +399,25 @@ def _inject_params(
     return workflow
 
 
-_MEDIA_KEYS: dict[str, str] = {
-    "images": "image",
-    "audio": "audio",
-    "gifs": "image",
-    "video": "video",
-}
+_MEDIA_KEYS = ("images", "audio")
+
+_VIDEO_EXTENSIONS = {".mp4", ".webm", ".mkv", ".avi", ".mov", ".gif"}
+_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".ogg", ".aac", ".m4a"}
+
+
+def _infer_media_type(filename: str, fallback: str) -> str:
+    """Infer media type from file extension.
+
+    ComfyUI's SaveVideo/PreviewVideo nodes report video output under
+    the ``"images"`` history key, so relying on the key alone would
+    misclassify video files as images.
+    """
+    ext = Path(filename).suffix.lower()
+    if ext in _VIDEO_EXTENSIONS:
+        return "video"
+    if ext in _AUDIO_EXTENSIONS:
+        return "audio"
+    return fallback
 
 
 def _collect_outputs(outputs: dict[str, Any]) -> list[dict[str, str]]:
@@ -412,13 +425,15 @@ def _collect_outputs(outputs: dict[str, Any]) -> list[dict[str, str]]:
     for node_output in outputs.values():
         if not isinstance(node_output, dict):
             continue
-        for key, media_type in _MEDIA_KEYS.items():
+        for key in _MEDIA_KEYS:
+            fallback = "audio" if key == "audio" else "image"
             for item in node_output.get(key, []):
+                filename = item.get("filename", "")
                 collected.append({
-                    "filename": item.get("filename", ""),
+                    "filename": filename,
                     "subfolder": item.get("subfolder", ""),
                     "type": item.get("type", "output"),
-                    "media_type": media_type,
+                    "media_type": _infer_media_type(filename, fallback),
                 })
     return collected
 

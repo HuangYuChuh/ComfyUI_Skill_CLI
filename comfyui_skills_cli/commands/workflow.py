@@ -70,6 +70,14 @@ _MEDIA_TYPE_FIELDS: dict[str, dict[str, dict[str, Any]]] = {
         "cfg_scale": {"exposed": True, "required": False, "description": "Classifier-free guidance scale"},
         "temperature": {"exposed": True, "required": False, "description": "Sampling temperature"},
     },
+    "video": {
+        "format": {"exposed": True, "required": False, "description": "Output video format"},
+        "codec": {"exposed": True, "required": False, "description": "Video codec"},
+        "frame_rate": {"exposed": True, "required": False, "description": "Video frame rate"},
+        "fps": {"exposed": True, "required": False, "description": "Frames per second"},
+        "noise_seed": {"exposed": True, "required": False, "description": "Noise seed for video generation"},
+        "cfg": {"exposed": True, "required": False, "description": "Classifier-free guidance scale"},
+    },
 }
 
 _LOAD_IMAGE_CLASSES = {"LoadImage", "LoadImageMask"}
@@ -91,6 +99,7 @@ def _extract_schema(workflow_data: dict[str, Any], media_type: str = "image") ->
     *media_type* selects additional field-exposure rules beyond the base
     set.  ``"image"`` (default) uses only the generic rules.
     ``"audio"`` adds audio-specific fields like tags, lyrics, bpm, etc.
+    ``"video"`` adds video-specific fields like format, codec, fps, etc.
     """
     expose_fields = dict(_AUTO_EXPOSE_FIELDS)
     if media_type in _MEDIA_TYPE_FIELDS:
@@ -384,7 +393,7 @@ def workflow_import(
     ctx: typer.Context,
     json_path: str = typer.Argument(None, help="Path to workflow JSON file (omit when using --from-server)"),
     name: str = typer.Option("", "--name", "-n", help="Workflow ID (default: derived from filename)"),
-    media_type: str = typer.Option("image", "--type", "-t", help="Media type preset for parameter detection: image (default), audio"),
+    media_type: str = typer.Option("image", "--type", "-t", help="Media type preset for parameter detection: image (default), audio, video"),
     from_server: bool = typer.Option(False, "--from-server", help="Import from ComfyUI server userdata"),
     preview: bool = typer.Option(False, "--preview", help="Preview only, don't import"),
     check_deps: bool = typer.Option(False, "--check-deps", help="Check dependencies after import"),
