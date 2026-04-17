@@ -275,5 +275,71 @@ class WsEventsTests(unittest.TestCase):
         self.assertEqual(collected[0]["type"], "execution_error")
 
 
+# -- userdata workflows --
+
+class ListUserdataWorkflowsTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.client = ComfyUIClient("http://localhost:8188")
+
+    @patch("comfyui_skills_cli.client.requests.get")
+    def test_v2_userdata_returns_list_of_dicts(self, mock_get: MagicMock) -> None:
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: [
+                {"name": "a.json", "path": "workflows/a.json", "type": "file"},
+                {"name": "b.json", "path": "workflows/b.json", "type": "file"},
+            ],
+        )
+        paths = self.client.list_userdata_workflows()
+        self.assertEqual(paths, ["workflows/a.json", "workflows/b.json"])
+        self.assertEqual(mock_get.call_args.kwargs["params"], {"path": "workflows"})
+
+    @patch("comfyui_skills_cli.client.requests.get")
+    def test_falls_back_to_userdata_bare_strings(self, mock_get: MagicMock) -> None:
+        # /v2/userdata returns empty, /userdata returns bare filenames
+        mock_get.side_effect = [
+            MagicMock(status_code=200, json=lambda: []),
+            MagicMock(status_code=200, json=lambda: ["a.json", "b.json"]),
+        ]
+        paths = self.client.list_userdata_workflows()
+        self.assertEqual(paths, ["workflows/a.json", "workflows/b.json"])
+
+    @patch("comfyui_skills_cli.client.requests.get")
+    def test_both_endpoints_empty(self, mock_get: MagicMock) -> None:
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: [])
+        self.assertEqual(self.client.list_userdata_workflows(), [])
+
+    @patch("comfyui_skills_cli.client.requests.get")
+    def test_filters_non_json_entries(self, mock_get: MagicMock) -> None:
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: [
+                {"path": "workflows/a.json"},
+                {"path": "comfy.settings.json"},
+                {"path": "workflows/readme.txt"},
+            ],
+        )
+        paths = self.client.list_userdata_workflows()
+        self.assertEqual(paths, ["workflows/a.json", "comfy.settings.json"])
+
+
+class ReadUserdataWorkflowTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.client = ComfyUIClient("http://localhost:8188")
+
+    @patch("comfyui_skills_cli.client.requests.get")
+    def test_percent_encodes_full_path(self, mock_get: MagicMock) -> None:
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: {"nodes": []})
+        self.client.read_userdata_workflow("workflows/MultiCharacter.json")
+        called_url = mock_get.call_args.args[0]
+        self.assertIn("/userdata/workflows%2FMultiCharacter.json", called_url)
+        self.assertNotIn("/userdata/workflows/MultiCharacter.json", called_url)
+
+    @patch("comfyui_skills_cli.client.requests.get")
+    def test_returns_none_on_404(self, mock_get: MagicMock) -> None:
+        mock_get.return_value = MagicMock(status_code=404)
+        self.assertIsNone(self.client.read_userdata_workflow("workflows/missing.json"))
+
+
 if __name__ == "__main__":
     unittest.main()
