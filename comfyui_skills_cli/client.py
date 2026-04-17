@@ -327,33 +327,54 @@ class ComfyUIClient:
     # -- ComfyUI Userdata API --
 
     def list_userdata_workflows(self) -> list[str]:
-        for path in ["/v2/userdata", "/userdata"]:
+        # /v2/userdata uses "path" (not "dir") and returns a list of dicts
+        # with a "path" key. /userdata uses "dir" and returns bare filenames.
+        # Skip empty results so a working variant is always found.
+        candidates = [
+            ("/v2/userdata", {"path": "workflows"}),
+            ("/userdata", {"dir": "workflows"}),
+        ]
+        for base, params in candidates:
             try:
-                resp = self._get(f"{path}?dir=workflows&recurse=true")
-                if resp.status_code == 200:
-                    data = resp.json()
-                    if isinstance(data, list):
-                        return [f for f in data if isinstance(f, str) and f.endswith(".json")]
-                    if isinstance(data, dict) and "files" in data:
-                        return [
-                            f.get("path", f.get("name", ""))
-                            for f in data["files"]
-                            if isinstance(f, dict) and (f.get("path", "") or f.get("name", "")).endswith(".json")
-                        ]
+                resp = self._get(base, params=params)
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+                paths: list[str] = []
+                if isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, str) and item.endswith(".json"):
+                            # /userdata?dir= returns bare filenames; normalise
+                            # to a full relative path for read_userdata_workflow.
+                            paths.append(item if "/" in item else f"workflows/{item}")
+                        elif isinstance(item, dict):
+                            p = item.get("path") or item.get("name") or ""
+                            if isinstance(p, str) and p.endswith(".json"):
+                                paths.append(p)
+                elif isinstance(data, dict) and "files" in data:
+                    paths = [
+                        f.get("path", f.get("name", ""))
+                        for f in data["files"]
+                        if isinstance(f, dict) and (f.get("path", "") or f.get("name", "")).endswith(".json")
+                    ]
+                if paths:
+                    return paths
             except (requests.RequestException, ValueError):
                 continue
         return []
 
     def read_userdata_workflow(self, workflow_path: str) -> dict[str, Any] | None:
         import urllib.parse
+        # aiohttp matches /userdata/{file} as a single path segment. Percent-
+        # encode the full relative path (including "/" separators) so it is
+        # not split into multiple segments, which would return 404.
         encoded = urllib.parse.quote(workflow_path, safe="")
-        for base in ["/v2/userdata", "/userdata"]:
-            try:
-                resp = self._get(f"{base}/workflows/{encoded}")
-                if resp.status_code == 200:
-                    return resp.json()
-            except (requests.RequestException, ValueError):
-                continue
+        try:
+            resp = self._get(f"/userdata/{encoded}")
+            if resp.status_code == 200:
+                return resp.json()
+        except (requests.RequestException, ValueError):
+            pass
         return None
 
     # -- Manager model install --
