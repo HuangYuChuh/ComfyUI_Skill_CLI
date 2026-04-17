@@ -48,6 +48,7 @@ def run_cmd(
 
     input_args = _parse_args(ctx, args)
     parameters = _get_parameters(schema_data)
+    _upload_media(ctx, client, parameters, input_args)
     workflow = _inject_params(workflow_data, parameters, input_args)
 
     client_id = str(uuid.uuid4())
@@ -266,6 +267,7 @@ def submit_cmd(
 
     input_args = _parse_args(ctx, args)
     parameters = _get_parameters(schema_data)
+    _upload_media(ctx, client, parameters, input_args)
     workflow = _inject_params(workflow_data, parameters, input_args)
     targets = [t.strip() for t in only.split(",") if t.strip()] if only else None
 
@@ -381,6 +383,47 @@ def _get_parameters(schema_data: dict[str, Any]) -> dict[str, Any]:
             if name not in parameters and ui_param.get("exposed", False):
                 parameters[name] = ui_param
     return parameters
+
+
+def _looks_like_local_path(value: str) -> bool:
+    """Only treat explicit filesystem paths as upload candidates.
+
+    Bare filenames (``cat.png``) and server subfolder refs (``clipspace/foo.png``)
+    are resolved on the ComfyUI server and must not be replaced by whatever
+    happens to sit in the caller's cwd.
+    """
+    return os.path.isabs(value) or value.startswith(("./", "../", "~"))
+
+
+def _upload_media(
+    ctx: typer.Context,
+    client: ComfyUIClient,
+    parameters: dict[str, Any],
+    args: dict[str, Any],
+) -> None:
+    """Upload local image files referenced by image-type params to ComfyUI.
+
+    Rewrites ``args`` in place: an explicit local file path becomes the uploaded
+    reference (``subfolder/name`` or ``name``) that ``LoadImage`` expects.
+    URLs, bare filenames, server-side subfolder refs, and non-existent paths
+    are left untouched.
+    """
+    for key, value in list(args.items()):
+        if parameters.get(key, {}).get("type") != "image":
+            continue
+        if not isinstance(value, str) or not _looks_like_local_path(value):
+            continue
+        expanded = os.path.expanduser(value)
+        if not os.path.isfile(expanded):
+            continue
+        try:
+            result = client.upload_image(expanded)
+        except Exception as exc:
+            output_error(ctx, "UPLOAD_FAILED", f"Failed to upload {value}: {exc}")
+            return
+        name = result.get("name", "")
+        subfolder = result.get("subfolder", "")
+        args[key] = f"{subfolder}/{name}" if subfolder else name
 
 
 def _inject_params(
