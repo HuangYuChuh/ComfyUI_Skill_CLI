@@ -17,6 +17,7 @@ import typer
 
 from ..client import ComfyUIClient
 from ..config import get_base_dir, get_default_server_id, get_server, load_config
+from ..history_writer import save_run_record
 from ..output import OutputFormat, get_output_format, is_machine_mode, output_error, output_event, output_result
 from ..error_hints import match_error_hint
 from ..storage import get_schema, get_workflow_data
@@ -24,6 +25,30 @@ from ..storage import get_schema, get_workflow_data
 _POLL_INITIAL = 1.0
 _POLL_MAX = 10.0
 _POLL_FACTOR = 1.5
+
+
+class _RunContext:
+    """Lightweight carrier for execution metadata needed by history recording."""
+
+    __slots__ = ("base_dir", "server_id", "workflow_id", "prompt_id", "args", "_t0")
+
+    def __init__(self, base_dir: Path, server_id: str, workflow_id: str, prompt_id: str, args: dict[str, Any]):
+        self.base_dir = base_dir
+        self.server_id = server_id
+        self.workflow_id = workflow_id
+        self.prompt_id = prompt_id
+        self.args = args
+        self._t0 = 0.0
+
+    def start(self) -> None:
+        self._t0 = time.time()
+
+    def save(self, status: str, outputs: list | None = None, error: str = "") -> None:
+        duration_ms = int((time.time() - self._t0) * 1000) if self._t0 else 0
+        save_run_record(
+            self.base_dir, self.server_id, self.workflow_id, self.prompt_id,
+            self.args, status, duration_ms=duration_ms, outputs=outputs, error=error,
+        )
 
 
 def _ws_available() -> bool:
@@ -87,14 +112,18 @@ def run_cmd(
         console = Console(stderr=True)
         console.print(f"[dim]Queued: {prompt_id}[/dim]")
 
+    # Track execution for history
+    run_ctx = _RunContext(base_dir, server_id, workflow_id, prompt_id, input_args)
+    run_ctx.start()
+
     if _ws_available():
         try:
-            _run_with_ws(ctx, client, workflow, prompt_id, client_id, base_dir, server_config, fmt)
+            _run_with_ws(ctx, client, workflow, prompt_id, client_id, base_dir, server_config, fmt, run_ctx)
             return
         except Exception:
             logger.debug("WebSocket failed, falling back to polling", exc_info=True)
 
-    _run_with_poll(ctx, client, prompt_id, base_dir, server_config, fmt)
+    _run_with_poll(ctx, client, prompt_id, base_dir, server_config, fmt, run_ctx)
 
 
 def _run_with_ws(
@@ -106,6 +135,7 @@ def _run_with_ws(
     base_dir: Any,
     server_config: dict[str, Any],
     fmt: OutputFormat,
+    run_ctx: _RunContext | None = None,
 ) -> None:
     if fmt == OutputFormat.TEXT:
         from rich.console import Console
@@ -158,10 +188,14 @@ def _run_with_ws(
             hint = match_error_hint(error_msg)
             output_event(ctx, "error", prompt_id=prompt_id, message=error_msg)
             output_error(ctx, "EXECUTION_FAILED", error_msg, hint=hint)
+            if run_ctx:
+                run_ctx.save("error", error=error_msg)
             return
 
         elif etype == "execution_interrupted":
             output_error(ctx, "EXECUTION_INTERRUPTED", "Execution was interrupted")
+            if run_ctx:
+                run_ctx.save("interrupted")
             return
 
     history = client.get_history(prompt_id)
@@ -172,6 +206,8 @@ def _run_with_ws(
             hint = match_error_hint(error_msg)
             output_event(ctx, "error", prompt_id=prompt_id, message=error_msg)
             output_error(ctx, "EXECUTION_FAILED", error_msg, hint=hint)
+            if run_ctx:
+                run_ctx.save("error", error=error_msg)
             return
         outputs = history.get("outputs", {})
         collected = _collect_outputs(outputs)
@@ -180,6 +216,8 @@ def _run_with_ws(
         collected = []
 
     output_event(ctx, "completed", prompt_id=prompt_id, outputs=collected)
+    if run_ctx:
+        run_ctx.save("success", outputs=collected)
     if fmt != OutputFormat.STREAM_JSON:
         output_result(ctx, {
             "status": "success",
@@ -195,6 +233,7 @@ def _run_with_poll(
     base_dir: Any,
     server_config: dict[str, Any],
     fmt: OutputFormat,
+    run_ctx: _RunContext | None = None,
 ) -> None:
     if fmt == OutputFormat.TEXT:
         from rich.console import Console
@@ -212,6 +251,8 @@ def _run_with_poll(
                 collected = _collect_outputs(outputs)
                 collected = _download_outputs(client, collected, base_dir, server_config)
                 output_event(ctx, "completed", prompt_id=prompt_id, outputs=collected)
+                if run_ctx:
+                    run_ctx.save("success", outputs=collected)
                 if fmt == OutputFormat.STREAM_JSON:
                     return
                 output_result(ctx, {
@@ -226,6 +267,8 @@ def _run_with_poll(
                 hint = match_error_hint(error_msg)
                 output_event(ctx, "error", prompt_id=prompt_id, message=error_msg)
                 output_error(ctx, "EXECUTION_FAILED", error_msg, hint=hint)
+                if run_ctx:
+                    run_ctx.save("error", error=error_msg)
                 return
 
         queue = client.get_queue()
@@ -277,9 +320,12 @@ def submit_cmd(
         output_error(ctx, "SUBMIT_FAILED", f"Failed to submit workflow: {exc}")
         return
 
+    prompt_id = result.get("prompt_id", "")
+    save_run_record(base_dir, server_id, workflow_id, prompt_id, input_args, "submitted")
+
     output_result(ctx, {
         "status": "submitted",
-        "prompt_id": result.get("prompt_id", ""),
+        "prompt_id": prompt_id,
     })
 
 
