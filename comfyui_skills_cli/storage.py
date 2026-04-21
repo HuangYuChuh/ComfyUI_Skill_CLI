@@ -32,12 +32,14 @@ def list_workflows(base_dir: Path, server_id: str) -> list[dict[str, Any]]:
         if not schema_path.exists():
             continue
         schema = _load_json(schema_path)
+        params = _summarize_params(schema)
         workflows.append({
             "workflow_id": workflow_dir.name,
             "server_id": server_id,
             "description": schema.get("description", ""),
             "enabled": schema.get("enabled", True),
-            "parameters": _summarize_params(schema),
+            "param_count": len(params),
+            "parameters": params,
         })
     return workflows
 
