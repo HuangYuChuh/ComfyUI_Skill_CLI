@@ -3,23 +3,31 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
+
+
+def _is_under(child: Path, parent: Path) -> bool:
+    """Check if *child* lives inside *parent* — works on both Windows and POSIX."""
+    try:
+        child.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
 
 
 def _safe_path(base_dir: Path, server_id: str, workflow_id: str) -> Path:
     """Construct and validate a workflow directory path. Raises ValueError on traversal."""
     target = (base_dir / "data" / server_id / workflow_id).resolve()
-    safe_root = (base_dir / "data").resolve()
-    if not str(target).startswith(str(safe_root) + "/") and target != safe_root:
+    if not _is_under(target, base_dir / "data"):
         raise ValueError(f"Invalid path: {server_id}/{workflow_id}")
     return target
 
 
 def list_workflows(base_dir: Path, server_id: str) -> list[dict[str, Any]]:
     data_dir = (base_dir / "data" / server_id).resolve()
-    safe_root = (base_dir / "data").resolve()
-    if not str(data_dir).startswith(str(safe_root) + "/") and data_dir != safe_root:
+    if not _is_under(data_dir, base_dir / "data"):
         return []
     if not data_dir.exists():
         return []
@@ -32,12 +40,14 @@ def list_workflows(base_dir: Path, server_id: str) -> list[dict[str, Any]]:
         if not schema_path.exists():
             continue
         schema = _load_json(schema_path)
+        params = _summarize_params(schema)
         workflows.append({
             "workflow_id": workflow_dir.name,
             "server_id": server_id,
             "description": schema.get("description", ""),
             "enabled": schema.get("enabled", True),
-            "parameters": _summarize_params(schema),
+            "param_count": len(params),
+            "parameters": params,
         })
     return workflows
 
