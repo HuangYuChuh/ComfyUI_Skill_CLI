@@ -313,7 +313,6 @@ def _convert_node_inputs(
     converted: dict[str, Any] = {}
     connected_names: set[str] = set()
 
-    # Connected inputs
     for slot_idx, slot in enumerate(input_slots):
         if not isinstance(slot, dict):
             continue
@@ -326,13 +325,19 @@ def _convert_node_inputs(
         converted[slot_name] = [link_tuple[0], link_tuple[1]]
         connected_names.add(slot_name)
 
-    # Widget values
-    widget_field_names = _get_ordered_input_names(node_info)
-    widget_field_names = [n for n in widget_field_names if n not in connected_names]
+    widget_input_names = [
+        (slot.get("name") or "").strip()
+        for slot in input_slots
+        if isinstance(slot, dict) and slot.get("widget")
+    ]
 
     control_fields = _get_control_after_generate_fields(node_info)
     widget_idx = 0
-    for field_name in widget_field_names:
+
+    for field_name in widget_input_names:
+        if field_name in connected_names:
+            widget_idx += 1
+            continue
         if widget_idx >= len(widget_values):
             break
         converted[field_name] = widget_values[widget_idx]
