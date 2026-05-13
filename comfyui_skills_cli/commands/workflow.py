@@ -82,6 +82,51 @@ _MEDIA_TYPE_FIELDS: dict[str, dict[str, dict[str, Any]]] = {
 
 _LOAD_IMAGE_CLASSES = {"LoadImage", "LoadImageMask"}
 
+_WIDGET_BASE_TYPES = {"INT", "FLOAT", "STRING", "BOOLEAN"}
+
+
+def _is_widget_type(type_def: list) -> bool:
+    if not isinstance(type_def, list) or not type_def:
+        return False
+    
+    t = type_def[0]
+    
+    if isinstance(t, list):
+        return True
+    
+    return isinstance(t, str) and t in _WIDGET_BASE_TYPES
+
+
+def _get_widget_field_names_from_schema(node_info: dict[str, Any]) -> list[str]:
+    widget_fields: list[str] = []
+    
+    inp = node_info.get("input", {})
+    
+    input_order = node_info.get("input_order", {})
+    if isinstance(input_order, dict):
+        for section in ("required", "optional"):
+            names = input_order.get(section, [])
+            if isinstance(names, list):
+                for name in names:
+                    type_def = None
+                    for sec in (inp.get("required", {}), inp.get("optional", {})):
+                        if name in sec:
+                            type_def = sec[name]
+                            break
+                    if type_def and _is_widget_type(type_def):
+                        widget_fields.append(name)
+        if widget_fields:
+            return widget_fields
+    
+    for section in ("required", "optional"):
+        sec = inp.get(section, {})
+        if isinstance(sec, dict):
+            for name, type_def in sec.items():
+                if _is_widget_type(type_def):
+                    widget_fields.append(name)
+    
+    return widget_fields
+
 
 def _get_type_guess(value: Any) -> str:
     if isinstance(value, bool):
@@ -313,7 +358,6 @@ def _convert_node_inputs(
     converted: dict[str, Any] = {}
     connected_names: set[str] = set()
 
-    # Connected inputs
     for slot_idx, slot in enumerate(input_slots):
         if not isinstance(slot, dict):
             continue
@@ -326,13 +370,15 @@ def _convert_node_inputs(
         converted[slot_name] = [link_tuple[0], link_tuple[1]]
         connected_names.add(slot_name)
 
-    # Widget values
-    widget_field_names = _get_ordered_input_names(node_info)
-    widget_field_names = [n for n in widget_field_names if n not in connected_names]
-
+    widget_field_names = _get_widget_field_names_from_schema(node_info)
+    
     control_fields = _get_control_after_generate_fields(node_info)
     widget_idx = 0
+    
     for field_name in widget_field_names:
+        if field_name in connected_names:
+            widget_idx += 1
+            continue
         if widget_idx >= len(widget_values):
             break
         converted[field_name] = widget_values[widget_idx]
