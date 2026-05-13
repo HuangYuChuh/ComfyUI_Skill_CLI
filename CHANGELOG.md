@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.12
+
+### Fixes
+
+- `workflow import` now correctly aligns `widgets_values` to input fields when widget inputs are partially connected. Previously, nodes like `EmptyFlux2LatentImage` with connected `width`/`height` would pick up `batch_size = 1024` from the wrong position in `widgets_values`, causing GPU OOM. The fix derives widget field order from the `object_info` schema and treats connected widget slots as placeholders that still advance the `widgets_values` index — correctly handling both ComfyUI editor serialization formats (verbose pre-0.3.73 and compact 0.3.73+). Reported and patched by @TBT0205 in #36.
+
+### Internal
+
+- Sync `__version__` in `comfyui_skills_cli/__init__.py` with `pyproject.toml` (it had drifted again between 0.2.10 and 0.2.11; this release jumps it from 0.2.10 → 0.2.12 to catch up).
+- Added regression tests covering both editor serialization formats, the `KSampler` `control_after_generate` placeholder, and the all-widgets-connected edge case (#37).
+
 ## 0.2.10
 
 ### Improvements
