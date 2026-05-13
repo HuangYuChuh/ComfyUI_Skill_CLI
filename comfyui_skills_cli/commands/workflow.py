@@ -82,29 +82,19 @@ _MEDIA_TYPE_FIELDS: dict[str, dict[str, dict[str, Any]]] = {
 
 _LOAD_IMAGE_CLASSES = {"LoadImage", "LoadImageMask"}
 
-# Connection types (passed via links, not widgets)
-_CONNECTION_TYPES = {
-    "MODEL", "LATENT", "CONDITIONING", "CLIP", "VAE", "IMAGE", "MASK",
-    "CONTROL_NET", "GUIDER", "SIGMAS", "FLUXLATENT", "FLUX2LATENT",
-}
+_WIDGET_BASE_TYPES = {"INT", "FLOAT", "STRING", "BOOLEAN"}
 
 
 def _is_widget_type(type_def: list) -> bool:
-    if not isinstance(type_def, list) or len(type_def) == 0:
+    if not isinstance(type_def, list) or not type_def:
         return False
     
-    type_str = type_def[0]
+    t = type_def[0]
     
-    if isinstance(type_str, list):
+    if isinstance(t, list):
         return True
     
-    if not isinstance(type_str, str):
-        return False
-    
-    if type_str in _CONNECTION_TYPES:
-        return False
-    
-    return True
+    return isinstance(t, str) and t in _WIDGET_BASE_TYPES
 
 
 def _get_widget_field_names_from_schema(node_info: dict[str, Any]) -> list[str]:
@@ -136,14 +126,6 @@ def _get_widget_field_names_from_schema(node_info: dict[str, Any]) -> list[str]:
                     widget_fields.append(name)
     
     return widget_fields
-    
-    if not isinstance(type_str, str):
-        return False
-    
-    if type_str in _CONNECTION_TYPES:
-        return False
-    
-    return True
 
 
 def _get_type_guess(value: Any) -> str:
