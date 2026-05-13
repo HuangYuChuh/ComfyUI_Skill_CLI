@@ -82,6 +82,69 @@ _MEDIA_TYPE_FIELDS: dict[str, dict[str, dict[str, Any]]] = {
 
 _LOAD_IMAGE_CLASSES = {"LoadImage", "LoadImageMask"}
 
+# Connection types (passed via links, not widgets)
+_CONNECTION_TYPES = {
+    "MODEL", "LATENT", "CONDITIONING", "CLIP", "VAE", "IMAGE", "MASK",
+    "CONTROL_NET", "GUIDER", "SIGMAS", "FLUXLATENT", "FLUX2LATENT",
+}
+
+
+def _is_widget_type(type_def: list) -> bool:
+    if not isinstance(type_def, list) or len(type_def) == 0:
+        return False
+    
+    type_str = type_def[0]
+    
+    if isinstance(type_str, list):
+        return True
+    
+    if not isinstance(type_str, str):
+        return False
+    
+    if type_str in _CONNECTION_TYPES:
+        return False
+    
+    return True
+
+
+def _get_widget_field_names_from_schema(node_info: dict[str, Any]) -> list[str]:
+    widget_fields: list[str] = []
+    
+    inp = node_info.get("input", {})
+    
+    input_order = node_info.get("input_order", {})
+    if isinstance(input_order, dict):
+        for section in ("required", "optional"):
+            names = input_order.get(section, [])
+            if isinstance(names, list):
+                for name in names:
+                    type_def = None
+                    for sec in (inp.get("required", {}), inp.get("optional", {})):
+                        if name in sec:
+                            type_def = sec[name]
+                            break
+                    if type_def and _is_widget_type(type_def):
+                        widget_fields.append(name)
+        if widget_fields:
+            return widget_fields
+    
+    for section in ("required", "optional"):
+        sec = inp.get(section, {})
+        if isinstance(sec, dict):
+            for name, type_def in sec.items():
+                if _is_widget_type(type_def):
+                    widget_fields.append(name)
+    
+    return widget_fields
+    
+    if not isinstance(type_str, str):
+        return False
+    
+    if type_str in _CONNECTION_TYPES:
+        return False
+    
+    return True
+
 
 def _get_type_guess(value: Any) -> str:
     if isinstance(value, bool):
@@ -325,16 +388,12 @@ def _convert_node_inputs(
         converted[slot_name] = [link_tuple[0], link_tuple[1]]
         connected_names.add(slot_name)
 
-    widget_input_names = [
-        (slot.get("name") or "").strip()
-        for slot in input_slots
-        if isinstance(slot, dict) and slot.get("widget")
-    ]
-
+    widget_field_names = _get_widget_field_names_from_schema(node_info)
+    
     control_fields = _get_control_after_generate_fields(node_info)
     widget_idx = 0
-
-    for field_name in widget_input_names:
+    
+    for field_name in widget_field_names:
         if field_name in connected_names:
             widget_idx += 1
             continue
