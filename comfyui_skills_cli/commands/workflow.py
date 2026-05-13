@@ -82,7 +82,7 @@ _MEDIA_TYPE_FIELDS: dict[str, dict[str, dict[str, Any]]] = {
 
 _LOAD_IMAGE_CLASSES = {"LoadImage", "LoadImageMask"}
 
-_WIDGET_BASE_TYPES = {"INT", "FLOAT", "STRING", "BOOLEAN"}
+_WIDGET_BASE_TYPES = {"INT", "FLOAT", "STRING", "BOOLEAN", "COMBO"}
 
 
 def _is_widget_type(type_def: list) -> bool:
