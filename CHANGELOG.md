@@ -21,6 +21,21 @@
 - Sync `__version__` in `comfyui_skills_cli/__init__.py` with `pyproject.toml` (it had drifted again between 0.2.10 and 0.2.11; this release jumps it from 0.2.10 → 0.2.12 to catch up).
 - Added regression tests covering both editor serialization formats, the `KSampler` `control_after_generate` placeholder, and the all-widgets-connected edge case (#37).
 
+## 0.2.11
+
+### New Flags
+
+- `run` / `submit --job-id <id>` — idempotency key for retries. If a job with the same ID has already run, returns the cached result immediately instead of re-queueing. Dedup is O(1) — file existence check, no scan or race window. Useful for AI agents that may retry a failed network call without wanting to pay the GPU cost twice.
+
+### Improvements
+
+- `list` output now includes a `param_count` field so agents can gauge workflow complexity before execution and skip workflows with too many parameters, or warn users before prompting for 50+ fields.
+- `run` and `submit` now write execution history to `data/{server_id}/{workflow_id}/history/{prompt_id}.json` on completion, capturing duration, outputs, and status (success / error / interrupted / submitted). This matches the format `history list` already consumes, so the two commands now share a single persistence layer.
+
+### Fixes
+
+- `workflow import` no longer fails on Windows. `_safe_path` and `list_workflows` previously compared paths by string concatenation with `"/"`, which never matched backslash-separated Windows paths and blocked every import. Replaced with `Path.relative_to()`, which is platform-correct.
+
 ## 0.2.10
 
 ### Improvements
