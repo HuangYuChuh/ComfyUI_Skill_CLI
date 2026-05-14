@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.13
+
+### Fixes
+
+- `_is_widget_type()` now recognizes string-form COMBO inputs (`["COMBO", {...}]`), which are used by third-party nodes and ComfyUI's v2 IO system. Previously only the list form (`[["optA", "optB"], {...}]`) was matched, causing string-form COMBO widgets to be silently skipped during `widgets_values` index alignment and producing an off-by-one error for every subsequent widget in the same node. Reported and patched by @TBT0205 in #38.
+
+### Internal
+
+- Extended the regression suite from 0.2.12 with four targeted cases covering both COMBO representations: `_is_widget_type` unit checks for string and list forms, an end-to-end conversion test for a third-party-style node, and a mixed-form node exercising both representations in one schema (#39).
+
 ## 0.2.12
 
 ### Fixes
