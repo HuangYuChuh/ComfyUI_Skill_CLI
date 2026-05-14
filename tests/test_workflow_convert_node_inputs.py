@@ -26,7 +26,7 @@ from __future__ import annotations
 import unittest
 from typing import Any
 
-from comfyui_skills_cli.commands.workflow import _convert_node_inputs
+from comfyui_skills_cli.commands.workflow import _convert_node_inputs, _is_widget_type
 
 
 # Schema for EmptyFlux2LatentImage as ComfyUI's /object_info reports it.
@@ -201,6 +201,75 @@ class ConvertNodeInputsEdgeCaseTests(unittest.TestCase):
                 "batch_size": ["upstream", 0],
             },
         )
+
+
+class ConvertNodeInputsStringComboTests(unittest.TestCase):
+    """ComfyUI represents COMBO dropdown inputs in two formats:
+
+      * **List form** — ``[["optA", "optB"], {...}]``. Used by built-in nodes.
+      * **String form** — ``["COMBO", {"tooltip": "..."}]``. Used by third-party
+        nodes and ComfyUI's v2 IO system.
+
+    Both must be recognized as widget types. If string-form COMBO inputs are
+    skipped, every subsequent widget in the same node shifts left by one in
+    ``widgets_values``, silently corrupting parameters."""
+
+    def test_is_widget_type_recognizes_string_combo(self) -> None:
+        self.assertTrue(_is_widget_type(["COMBO", {"tooltip": "Choose preset"}]))
+
+    def test_is_widget_type_still_recognizes_list_combo(self) -> None:
+        self.assertTrue(_is_widget_type([["euler", "euler_ancestral", "dpmpp_2m"]]))
+
+    def test_third_party_node_with_string_combo_aligns_correctly(self) -> None:
+        """Schema uses string-form COMBO followed by FLOAT and INT widgets.
+
+        Without the fix, ``preset`` would be skipped and ``strength``/``seed``
+        would consume the wrong widgets_values entries.
+        """
+        node_info = {
+            "input_order": {"required": ["preset", "strength", "seed"]},
+            "input": {
+                "required": {
+                    "preset": ["COMBO", {"tooltip": "Choose preset", "options": ["A", "B", "C"]}],
+                    "strength": ["FLOAT", {"default": 1.0}],
+                    "seed": ["INT", {"default": 0}],
+                }
+            },
+        }
+        node = {
+            "id": 99,
+            "type": "ThirdPartyNode",
+            "inputs": [],
+            "widgets_values": ["B", 0.8, 42],
+        }
+
+        out = _convert_node_inputs(node, node["type"], node_info, {})
+
+        self.assertEqual(out, {"preset": "B", "strength": 0.8, "seed": 42})
+
+    def test_node_mixing_string_and_list_combo(self) -> None:
+        """A single node may mix both COMBO representations. Both should be
+        treated as widget types and consume widgets_values entries in order."""
+        node_info = {
+            "input_order": {"required": ["preset", "sampler", "steps"]},
+            "input": {
+                "required": {
+                    "preset": ["COMBO", {"tooltip": "string form"}],
+                    "sampler": [["euler", "dpmpp_2m"]],  # list form
+                    "steps": ["INT", {"default": 20}],
+                }
+            },
+        }
+        node = {
+            "id": 100,
+            "type": "MixedComboNode",
+            "inputs": [],
+            "widgets_values": ["A", "euler", 25],
+        }
+
+        out = _convert_node_inputs(node, node["type"], node_info, {})
+
+        self.assertEqual(out, {"preset": "A", "sampler": "euler", "steps": 25})
 
 
 if __name__ == "__main__":
