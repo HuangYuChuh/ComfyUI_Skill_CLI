@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### New Flags
+
+- `upload --server <id>` selects a configured server at the command level, so the option can appear after the upload path (for example, `upload image.png --server remote`).
+- `upload --url <url>` uploads directly to a ComfyUI endpoint without requiring `config.json`. It is mutually exclusive with `--server`.
+
+### Fixes
+
+- `upload` no longer reports `No such option` for the `--server` and `--url` forms reported in #42. The existing global form (`--server remote upload image.png`) remains supported.
+
 ## 0.2.13
 
 ### Fixes

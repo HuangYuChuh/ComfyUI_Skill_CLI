@@ -19,6 +19,8 @@ def upload_cmd(
     from_output: str = typer.Option("", "--from-output", help="Prompt ID — reuse an output from a previous run as input"),
     mask: bool = typer.Option(False, "--mask", help="Upload as mask (for inpainting workflows)"),
     original: str = typer.Option("", "--original", help="Original image filename (for mask upload)"),
+    server_override: str = typer.Option("", "--server", "-s", help="Server ID (overrides the global option)"),
+    url: str = typer.Option("", "--url", help="ComfyUI server URL (overrides configured server)"),
 ):
     """Upload a file to ComfyUI for use in workflows.
 
@@ -34,16 +36,28 @@ def upload_cmd(
         return
 
     base_dir = get_base_dir(ctx.obj.get("base_dir", ""))
-    config = load_config(base_dir)
-    server_id = ctx.obj.get("server") or get_default_server_id(config)
-    server_config = get_server(config, server_id)
-
-    if not server_config:
-        output_error(ctx, "SERVER_NOT_FOUND", f'Server "{server_id}" not found.')
+    # A direct URL is intentionally usable without a skill project/config file.
+    # This is useful for one-off uploads and fixes `upload FILE --url URL`.
+    if url and (server_override or ctx.obj.get("server")):
+        output_error(ctx, "CONFLICTING_SERVER", "Provide either --server or --url, not both.")
         return
 
+    if url:
+        server_id = ""
+        server_config = {}
+        server_url = url
+    else:
+        config = load_config(base_dir)
+        server_id = server_override or ctx.obj.get("server") or get_default_server_id(config)
+        server_config = get_server(config, server_id)
+
+        if not server_config:
+            output_error(ctx, "SERVER_NOT_FOUND", f'Server "{server_id}" not found.')
+            return
+        server_url = server_config.get("url", "http://127.0.0.1:8188")
+
     client = ComfyUIClient(
-        server_url=server_config.get("url", "http://127.0.0.1:8188"),
+        server_url=server_url,
         auth=server_config.get("auth", ""),
     )
 
