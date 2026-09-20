@@ -118,6 +118,8 @@ comfyui-skill run txt2img -s my_server   # override with --server flag
 | `comfyui-skill status <prompt_id>` | Check execution status and show discovered results |
 | `comfyui-skill cancel <prompt_id>` | Cancel a running or queued job |
 | `comfyui-skill upload <file>` | Upload a file to ComfyUI for use in workflows |
+| `comfyui-skill upload <file> --server <id>` | Upload to a configured server (can be placed after the file path) |
+| `comfyui-skill upload <file> --url <url>` | Upload directly to a ComfyUI URL without using server config |
 | `comfyui-skill upload <file> --mask` | Upload a mask image for inpainting workflows |
 | `comfyui-skill upload --from-output <prompt_id>` | Chain a previous run's output as input for the next workflow |
 
@@ -207,6 +209,19 @@ comfyui-skill run txt2img -s my_server   # override with --server flag
 | Errors | Always | stderr |
 
 ## Common Management Tasks
+
+### Upload to a specific ComfyUI server
+
+```bash
+# Use a configured server; --server may appear after the file path
+comfyui-skill upload ./input.png --server remote
+
+# Use a URL directly; no config.json is required for this form
+comfyui-skill upload ./input.png --url http://remote:8188
+```
+
+`--server` and `--url` are mutually exclusive. The global form remains supported too:
+`comfyui-skill --server remote upload ./input.png`.
 
 ### Inspect models on a server
 
